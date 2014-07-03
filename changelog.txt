@@ -1,0 +1,72 @@
+JTransforms changelog
+
+3.0:    July ??, 2014
+        - Added support for arrays of size up to 2^63 (via JLargeArrays library).
+        - Fixed unreported bugs.
+        - Added unit tests for all transforms.
+        - Removed dependency of Cobertura.
+        - Changed build system from Ant to Maven.
+        - Moved source code repository from sf.net to github.com.
+
+2.4:    July 30, 2011
+        - Added support for unit tests (JUnit).
+        - Added support for code coverage analysis (Cobertura).
+        - Updated Ant file accordingly (generation of HTML reports).
+        - Added class RealFFTUtils_2D to make access to the data resulting from a real FFT transform more easily accessible.
+        - Added class RealFFTUtils_3D to make access to the data resulting from a real FFT transform more easily accessible.
+        - Fixed bugs in DoubleFFT_3D and FloatFFT_3D.
+
+2.3:	February 27, 2009
+	- Performance improvements for 3D FFT (realForwardFull() and realInverseFull() for not power-of-two sizes).
+	- Cosmetic changes.
+
+2.2:	January 30, 2009
+	- Fixed race condition in 3D FFT (realForwardFull() and realInverseFull() for not power-of-two sizes).
+	- Refactoring in ConcurrencyUtils.
+	- Cosmetic changes.	 
+
+2.1:	December 12, 2008
+	- Added Bluestein's FFT algorithm that significantly increases the performance and fixes accuracy issues when 
+	  the size of the data is a number with a large prime factor.
+	- Added extra digits to the floating-point constants.
+	- The root mean square (RMS) error is now computed in all accuracy classes.  
+
+2.0:	November 19, 2008	
+	- Added mixed-radix algorithms for all transforms (no more power-of-two size limitation).
+
+1.7:	August 4, 2008
+	- Fixed bug causing ArrayIndexOutOfBoundsException when 1D FFT transforms were run  in the following order:
+	  realFrowardFull(); complexInverse(); realForwardFull().
+	- Added javadoc distribution.
+	- Bzip2 is used to compress tar archives.
+
+1.6:	July 15, 2008
+	- Fixed bug causing error in realForwardFull() and realInverseFull() methods (3D FFT) when multiple threads were used.	
+	- Added real Discrete Hartley Transforms (DHT).
+	
+1.5:	June 13, 2008
+	- Fixed bug causing error when setNumberOfProcessors() was called after creating new instance of a transform. 
+	- Loop unrolling in scale. 
+	- Refactoring in ConcurrencyUtils.
+	- Improved benchmarks.
+
+1.4:	June 4, 2008
+	- Fixed bug causing errors in DoubleFFT_2D and FloatFFT_2D. 
+
+1.3:	May 7, 2008
+	- From now on, realForward() followed by realInverse() returns the original data.
+	- Added new variants of 1D transforms that allow to specify the offset in the input array.
+	- Added new variants of constructors for 1D transforms.
+	- Refactoring in the utility methods.
+	- Multiple sizes of each transform are now checked in the accuracy checks.
+	- The documentation has been updated.
+
+1.2:	January 1, 2008
+	- Added true multidimensional variants of 2D and 3D transforms.
+	- Added single precision transforms.   
+
+1.1:	September 23, 2007
+	- Added discrete sine transforms. 
+
+1.0:	August 29, 2007
+	- Initial release.

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org</groupId>
+    <artifactId>JTransforms</artifactId>
+    <version>3.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    
+    <url>https://github.com/wendykierp/JTransforms</url> 
+    
+    <licenses>
+        <license>
+            <name>FreeBSD</name>
+            <url>http://www.freebsd.org/copyright/freebsd-license.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>p.wendykier</id>
+            <name>Piotr Wendykier</name>
+            <email>p.wendykier@icm.edu.pl</email>
+            <organization>ICM-UW</organization>
+            <organizationUrl>http://www.icm.edu.pl</organizationUrl>
+            <roles>
+                <role>developer</role>
+            </roles>
+            <timezone>+1</timezone>
+        </developer>
+    </developers>
+    
+    
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>pl.edu.icm</groupId>
+            <artifactId>JLargeArrays</artifactId>
+            <version>1.2-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+   
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.6</maven.compiler.source>
+        <maven.compiler.target>1.6</maven.compiler.target>
+        <github.global.server>github</github.global.server>
+    </properties>
+    
+    <build>
+        <resources>
+            <resource>
+                <directory>test/resouces</directory>
+                <includes>
+                    <include>**/*.in</include>
+                    <include>**/*.out</include>
+                </includes>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <debug>false</debug>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    
+    <scm>
+        <connection>scm:git:ssh://git@github.com/wendykierp/JTransforms.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/wendykierp/JTransforms.git</developerConnection>
+        <url>https://github.com/wendykierp/JTransforms</url>
+        <tag>HEAD</tag>
+    </scm>
+    
+    <repositories>
+        <repository>
+            <id>icm</id>
+            <name>ICM project repository</name>
+            <url>http://maven.icm.edu.pl/artifactory/repo</url>
+        </repository>
+    </repositories>
+</project>
