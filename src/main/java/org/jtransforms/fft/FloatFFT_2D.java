@@ -38,9 +38,8 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
  * <br>
  * Part of the code is derived from General Purpose FFT Package written by
  * Takuya Ooura (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html)
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
  */
 public class FloatFFT_2D {
 
@@ -60,7 +59,7 @@ public class FloatFFT_2D {
 
     /**
      * Creates new instance of FloatFFT_2D.
-     * <p>
+     * 
      * @param rows number of rows
      * @param columns number of columns
      */
@@ -98,13 +97,12 @@ public class FloatFFT_2D {
      * Complex number is stored as two float values in sequence: the real and
      * imaginary part, i.e. the input array must be of size rows*2*columns. The
      * physical layout of the input data has to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*2*columns+2*k2] = Re[k1][k2],
      * a[k1*2*columns+2*k2+1] = Im[k1][k2], 0&lt;=k1&lt;rows, 0&lt;=k2&lt;columns,
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      */
     public void complexForward(final float[] a) {
@@ -196,13 +194,12 @@ public class FloatFFT_2D {
      * Complex number is stored as two float values in sequence: the real and
      * imaginary part, i.e. the input array must be of size rows*2*columns. The
      * physical layout of the input data has to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*2*columns+2*k2] = Re[k1][k2],
      * a[k1*2*columns+2*k2+1] = Im[k1][k2], 0&lt;=k1&lt;rows, 0&lt;=k2&lt;columns,
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      */
     public void complexForward(final FloatLargeArray a) {
@@ -294,13 +291,12 @@ public class FloatFFT_2D {
      * represented by 2 float values in sequence: the real and imaginary part,
      * i.e. the input array must be of size rows by 2*columns. The physical
      * layout of the input data has to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1][2*k2] = Re[k1][k2],
      * a[k1][2*k2+1] = Im[k1][k2], 0&lt;=k1&lt;rows, 0&lt;=k2&lt;columns,
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      */
     public void complexForward(final float[][] a) {
@@ -387,16 +383,15 @@ public class FloatFFT_2D {
      * Complex number is stored as two float values in sequence: the real and
      * imaginary part, i.e. the input array must be of size rows*2*columns. The
      * physical layout of the input data has to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*2*columns+2*k2] = Re[k1][k2],
      * a[k1*2*columns+2*k2+1] = Im[k1][k2], 0&lt;=k1&lt;rows, 0&lt;=k2&lt;columns,
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
-     * <p>
+     * 
      */
     public void complexInverse(final float[] a, final boolean scale) {
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
@@ -488,16 +483,15 @@ public class FloatFFT_2D {
      * Complex number is stored as two float values in sequence: the real and
      * imaginary part, i.e. the input array must be of size rows*2*columns. The
      * physical layout of the input data has to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*2*columns+2*k2] = Re[k1][k2],
      * a[k1*2*columns+2*k2+1] = Im[k1][k2], 0&lt;=k1&lt;rows, 0&lt;=k2&lt;columns,
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
-     * <p>
+     * 
      */
     public void complexInverse(final FloatLargeArray a, final boolean scale) {
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
@@ -589,16 +583,15 @@ public class FloatFFT_2D {
      * represented by 2 float values in sequence: the real and imaginary part,
      * i.e. the input array must be of size rows by 2*columns. The physical
      * layout of the input data has to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1][2*k2] = Re[k1][k2],
      * a[k1][2*k2+1] = Im[k1][k2], 0&lt;=k1&lt;rows, 0&lt;=k2&lt;columns,
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
-     * <p>
+     * 
      */
     public void complexInverse(final float[][] a, final boolean scale) {
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
@@ -684,9 +677,8 @@ public class FloatFFT_2D {
      * . This method only works when the sizes of both dimensions are
      * power-of-two numbers. The physical layout of the output data is as
      * follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*columns+2*k2] = Re[k1][k2] = Re[rows-k1][columns-k2],
      * a[k1*columns+2*k2+1] = Im[k1][k2] = -Im[rows-k1][columns-k2],
      *       0&lt;k1&lt;rows, 0&lt;k2&lt;columns/2,
@@ -703,12 +695,12 @@ public class FloatFFT_2D {
      * a[(rows/2)*columns] = Re[rows/2][0],
      * a[(rows/2)*columns+1] = Re[rows/2][columns/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForward(float[] a) {
@@ -735,9 +727,8 @@ public class FloatFFT_2D {
      * . This method only works when the sizes of both dimensions are
      * power-of-two numbers. The physical layout of the output data is as
      * follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*columns+2*k2] = Re[k1][k2] = Re[rows-k1][columns-k2],
      * a[k1*columns+2*k2+1] = Im[k1][k2] = -Im[rows-k1][columns-k2],
      *       0&lt;k1&lt;rows, 0&lt;k2&lt;columns/2,
@@ -754,12 +745,12 @@ public class FloatFFT_2D {
      * a[(rows/2)*columns] = Re[rows/2][0],
      * a[(rows/2)*columns+1] = Re[rows/2][columns/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForward(FloatLargeArray a) {
@@ -786,9 +777,8 @@ public class FloatFFT_2D {
      * . This method only works when the sizes of both dimensions are
      * power-of-two numbers. The physical layout of the output data is as
      * follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1][2*k2] = Re[k1][k2] = Re[rows-k1][columns-k2],
      * a[k1][2*k2+1] = Im[k1][k2] = -Im[rows-k1][columns-k2],
      *       0&lt;k1&lt;rows, 0&lt;k2&lt;columns/2,
@@ -805,12 +795,12 @@ public class FloatFFT_2D {
      * a[rows/2][0] = Re[rows/2][0],
      * a[rows/2][1] = Re[rows/2][columns/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForward(float[][] a) {
@@ -840,7 +830,7 @@ public class FloatFFT_2D {
      * array must be of size rows*2*columns, with only the first rows*columns
      * elements filled with real data. To get back the original data, use
      * <code>complexInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForwardFull(float[] a) {
@@ -871,7 +861,7 @@ public class FloatFFT_2D {
      * array must be of size rows*2*columns, with only the first rows*columns
      * elements filled with real data. To get back the original data, use
      * <code>complexInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForwardFull(FloatLargeArray a) {
@@ -902,7 +892,7 @@ public class FloatFFT_2D {
      * array must be of size rows by 2*columns, with only the first rows by
      * columns elements filled with real data. To get back the original data,
      * use <code>complexInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForwardFull(float[][] a) {
@@ -930,9 +920,8 @@ public class FloatFFT_2D {
      * . This method only works when the sizes of both dimensions are
      * power-of-two numbers. The physical layout of the input data has to be as
      * follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*columns+2*k2] = Re[k1][k2] = Re[rows-k1][columns-k2],
      * a[k1*columns+2*k2+1] = Im[k1][k2] = -Im[rows-k1][columns-k2],
      *       0&lt;k1&lt;rows, 0&lt;k2&lt;columns/2,
@@ -949,13 +938,13 @@ public class FloatFFT_2D {
      * a[(rows/2)*columns] = Re[rows/2][0],
      * a[(rows/2)*columns+1] = Re[rows/2][columns/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * <p>
+     * 
      * @param a data to transform
-     * <p>
+     * 
      * @param scale if true then scaling is performed
      */
     public void realInverse(float[] a, boolean scale) {
@@ -982,9 +971,8 @@ public class FloatFFT_2D {
      * . This method only works when the sizes of both dimensions are
      * power-of-two numbers. The physical layout of the input data has to be as
      * follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*columns+2*k2] = Re[k1][k2] = Re[rows-k1][columns-k2],
      * a[k1*columns+2*k2+1] = Im[k1][k2] = -Im[rows-k1][columns-k2],
      *       0&lt;k1&lt;rows, 0&lt;k2&lt;columns/2,
@@ -1001,13 +989,13 @@ public class FloatFFT_2D {
      * a[(rows/2)*columns] = Re[rows/2][0],
      * a[(rows/2)*columns+1] = Re[rows/2][columns/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * <p>
+     * 
      * @param a data to transform
-     * <p>
+     * 
      * @param scale if true then scaling is performed
      */
     public void realInverse(FloatLargeArray a, boolean scale) {
@@ -1034,9 +1022,8 @@ public class FloatFFT_2D {
      * . This method only works when the sizes of both dimensions are
      * power-of-two numbers. The physical layout of the input data has to be as
      * follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1][2*k2] = Re[k1][k2] = Re[rows-k1][columns-k2],
      * a[k1][2*k2+1] = Im[k1][k2] = -Im[rows-k1][columns-k2],
      *       0&lt;k1&lt;rows, 0&lt;k2&lt;columns/2,
@@ -1053,13 +1040,13 @@ public class FloatFFT_2D {
      * a[rows/2][0] = Re[rows/2][0],
      * a[rows/2][1] = Re[rows/2][columns/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * <p>
+     * 
      * @param a data to transform
-     * <p>
+     * 
      * @param scale if true then scaling is performed
      */
     public void realInverse(float[][] a, boolean scale) {
@@ -1088,9 +1075,9 @@ public class FloatFFT_2D {
      * part equal 0. Because the result is stored in <code>a</code>, the input
      * array must be of size rows*2*columns, with only the first rows*columns
      * elements filled with real data.
-     * <p>
+     * 
      * @param a data to transform
-     * <p>
+     * 
      * @param scale if true then scaling is performed
      */
     public void realInverseFull(float[] a, boolean scale) {
@@ -1120,9 +1107,9 @@ public class FloatFFT_2D {
      * part equal 0. Because the result is stored in <code>a</code>, the input
      * array must be of size rows*2*columns, with only the first rows*columns
      * elements filled with real data.
-     * <p>
+     * 
      * @param a data to transform
-     * <p>
+     * 
      * @param scale if true then scaling is performed
      */
     public void realInverseFull(FloatLargeArray a, boolean scale) {
@@ -1152,9 +1139,9 @@ public class FloatFFT_2D {
      * part equal 0. Because the result is stored in <code>a</code>, the input
      * array must be of size rows by 2*columns, with only the first rows by
      * columns elements filled with real data.
-     * <p>
+     * 
      * @param a data to transform
-     * <p>
+     * 
      * @param scale if true then scaling is performed
      */
     public void realInverseFull(float[][] a, boolean scale) {

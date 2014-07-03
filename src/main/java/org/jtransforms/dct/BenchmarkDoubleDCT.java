@@ -33,9 +33,8 @@ import pl.edu.icm.jlargearrays.DoubleLargeArray;
 
 /**
  * Benchmark of double precision DCT's
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
  */
 public class BenchmarkDoubleDCT
 {
@@ -114,7 +113,7 @@ public class BenchmarkDoubleDCT
             System.out.println("Forward DCT 1D of size " + sizes1D[i]);
             if (doWarmup) { // call the transform twice to warm up
                 DoubleDCT_1D dct = new DoubleDCT_1D(sizes1D[i]);
-                x = new double[(int)sizes1D[i]];
+                x = new double[(int) sizes1D[i]];
                 IOUtils.fillMatrix_1D(sizes1D[i], x);
                 dct.forward(x, doScaling);
                 IOUtils.fillMatrix_1D(sizes1D[i], x);
@@ -123,7 +122,7 @@ public class BenchmarkDoubleDCT
             long elapsedTime = System.nanoTime();
             DoubleDCT_1D dct = new DoubleDCT_1D(sizes1D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
-            x = new double[(int)sizes1D[i]];
+            x = new double[(int) sizes1D[i]];
             if (doWarmup) { // call the transform twice to warm up
                 IOUtils.fillMatrix_1D(sizes1D[i], x);
                 dct.forward(x, doScaling);
@@ -199,7 +198,7 @@ public class BenchmarkDoubleDCT
             System.out.println("Forward DCT 2D (input 2D) of size " + sizes2D[i] + " x " + sizes2D[i]);
             if (doWarmup) { // call the transform twice to warm up
                 DoubleDCT_2D dct2 = new DoubleDCT_2D(sizes2D[i], sizes2D[i]);
-                x = new double[(int)sizes2D[i]][(int)sizes2D[i]];
+                x = new double[(int) sizes2D[i]][(int) sizes2D[i]];
                 IOUtils.fillMatrix_2D(sizes2D[i], sizes2D[i], x);
                 dct2.forward(x, doScaling);
                 IOUtils.fillMatrix_2D(sizes2D[i], sizes2D[i], x);
@@ -208,7 +207,7 @@ public class BenchmarkDoubleDCT
             long elapsedTime = System.nanoTime();
             DoubleDCT_2D dct2 = new DoubleDCT_2D(sizes2D[i], sizes2D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
-            x = new double[(int)sizes2D[i]][(int)sizes2D[i]];
+            x = new double[(int) sizes2D[i]][(int) sizes2D[i]];
             double av_time = 0;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_2D(sizes2D[i], sizes2D[i], x);
@@ -279,7 +278,7 @@ public class BenchmarkDoubleDCT
             System.out.println("Forward DCT 3D (input 3D) of size " + sizes3D[i] + " x " + sizes3D[i] + " x " + sizes3D[i]);
             if (doWarmup) { // call the transform twice to warm up
                 DoubleDCT_3D dct3 = new DoubleDCT_3D(sizes3D[i], sizes3D[i], sizes3D[i]);
-                x = new double[(int)sizes3D[i]][(int)sizes3D[i]][(int)sizes3D[i]];
+                x = new double[(int) sizes3D[i]][(int) sizes3D[i]][(int) sizes3D[i]];
                 IOUtils.fillMatrix_3D(sizes3D[i], sizes3D[i], sizes3D[i], x);
                 dct3.forward(x, doScaling);
                 IOUtils.fillMatrix_3D(sizes3D[i], sizes3D[i], sizes3D[i], x);
@@ -288,7 +287,7 @@ public class BenchmarkDoubleDCT
             long elapsedTime = System.nanoTime();
             DoubleDCT_3D dct3 = new DoubleDCT_3D(sizes3D[i], sizes3D[i], sizes3D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
-            x = new double[(int)sizes3D[i]][(int)sizes3D[i]][(int)sizes3D[i]];
+            x = new double[(int) sizes3D[i]][(int) sizes3D[i]][(int) sizes3D[i]];
             double av_time = 0;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_3D(sizes3D[i], sizes3D[i], sizes3D[i], x);

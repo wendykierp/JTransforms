@@ -37,9 +37,8 @@ import pl.edu.icm.jlargearrays.DoubleLargeArray;
  * <br>
  * Part of code is derived from General Purpose FFT Package written by Takuya
  * Ooura (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html)
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
  */
 public class DoubleDST_2D {
 
@@ -59,7 +58,7 @@ public class DoubleDST_2D {
 
     /**
      * Creates new instance of DoubleDST_2D.
-     * <p>
+     * 
      * @param rows number of rows
      * @param columns number of columns
      */
@@ -93,7 +92,7 @@ public class DoubleDST_2D {
     /**
      * Computes 2D forward DST (DST-II) leaving the result in <code>a</code>.
      * The data is stored in 1D array in row-major order.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -166,7 +165,7 @@ public class DoubleDST_2D {
     /**
      * Computes 2D forward DST (DST-II) leaving the result in <code>a</code>.
      * The data is stored in 1D array in row-major order.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -239,7 +238,7 @@ public class DoubleDST_2D {
     /**
      * Computes 2D forward DST (DST-II) leaving the result in <code>a</code>.
      * The data is stored in 2D array.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -312,7 +311,7 @@ public class DoubleDST_2D {
     /**
      * Computes 2D inverse DST (DST-III) leaving the result in <code>a</code>.
      * The data is stored in 1D array in row-major order.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -385,7 +384,7 @@ public class DoubleDST_2D {
     /**
      * Computes 2D inverse DST (DST-III) leaving the result in <code>a</code>.
      * The data is stored in 1D array in row-major order.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -458,7 +457,7 @@ public class DoubleDST_2D {
     /**
      * Computes 2D inverse DST (DST-III) leaving the result in <code>a</code>.
      * The data is stored in 2D array.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */

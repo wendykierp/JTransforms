@@ -42,7 +42,6 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
  * This is a series of JUnit tests for the {@link FloatDCT_2D}.
  *
  * @author Piotr Wendykier
- *
  */
 @RunWith(value = Parameterized.class)
 public class FloatDCT_2DTest

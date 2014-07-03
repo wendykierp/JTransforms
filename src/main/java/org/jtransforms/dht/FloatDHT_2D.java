@@ -37,9 +37,8 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
  * <br>
  * Part of code is derived from General Purpose FFT Package written by Takuya
  * Ooura (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html)
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
  */
 public class FloatDHT_2D {
 
@@ -59,7 +58,7 @@ public class FloatDHT_2D {
 
     /**
      * Creates new instance of FloatDHT_2D.
-     * <p>
+     * 
      * @param rows number of rows
      * @param columns number of columns
      */
@@ -93,7 +92,7 @@ public class FloatDHT_2D {
     /**
      * Computes 2D real, forward DHT leaving the result in <code>a</code>. The
      * data is stored in 1D array in row-major order.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void forward(final float[] a) {
@@ -168,7 +167,7 @@ public class FloatDHT_2D {
     /**
      * Computes 2D real, forward DHT leaving the result in <code>a</code>. The
      * data is stored in 1D array in row-major order.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void forward(final FloatLargeArray a) {
@@ -243,7 +242,7 @@ public class FloatDHT_2D {
     /**
      * Computes 2D real, forward DHT leaving the result in <code>a</code>. The
      * data is stored in 2D array.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void forward(final float[][] a) {
@@ -319,7 +318,7 @@ public class FloatDHT_2D {
     /**
      * Computes 2D real, inverse DHT leaving the result in <code>a</code>. The
      * data is stored in 1D array in row-major order.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -396,7 +395,7 @@ public class FloatDHT_2D {
     /**
      * Computes 2D real, inverse DHT leaving the result in <code>a</code>. The
      * data is stored in 1D array in row-major order.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -473,7 +472,7 @@ public class FloatDHT_2D {
     /**
      * Computes 2D real, inverse DHT leaving the result in <code>a</code>. The
      * data is stored in 2D array.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */

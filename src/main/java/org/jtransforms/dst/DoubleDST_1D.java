@@ -35,9 +35,8 @@ import pl.edu.icm.jlargearrays.DoubleLargeArray;
  * Computes 1D Discrete Sine Transform (DST) of double precision data. The size
  * of data can be an arbitrary number. It uses DCT algorithm. This is a parallel
  * implementation optimized for SMP systems.
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
  */
 public class DoubleDST_1D {
 
@@ -48,7 +47,7 @@ public class DoubleDST_1D {
 
     /**
      * Creates new instance of DoubleDST_1D.
-     * <p>
+     * 
      * @param n size of data
      */
     public DoubleDST_1D(long n) {
@@ -60,7 +59,7 @@ public class DoubleDST_1D {
 
     /**
      * Computes 1D forward DST (DST-II) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -70,7 +69,7 @@ public class DoubleDST_1D {
 
     /**
      * Computes 1D forward DST (DST-II) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -80,7 +79,7 @@ public class DoubleDST_1D {
 
     /**
      * Computes 1D forward DST (DST-II) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
@@ -142,7 +141,7 @@ public class DoubleDST_1D {
 
     /**
      * Computes 1D forward DST (DST-II) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
@@ -208,7 +207,7 @@ public class DoubleDST_1D {
 
     /**
      * Computes 1D inverse DST (DST-III) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -218,7 +217,7 @@ public class DoubleDST_1D {
 
     /**
      * Computes 1D inverse DST (DST-III) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -228,7 +227,7 @@ public class DoubleDST_1D {
 
     /**
      * Computes 1D inverse DST (DST-III) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
@@ -285,7 +284,7 @@ public class DoubleDST_1D {
 
     /**
      * Computes 1D inverse DST (DST-III) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed

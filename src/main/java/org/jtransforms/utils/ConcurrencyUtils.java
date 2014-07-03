@@ -106,7 +106,7 @@ public class ConcurrencyUtils {
      * Sets the number of threads. If n is not a power-of-two number, then the
      * number of threads is set to the closest power-of-two number less than n.
      *
-     * @param n
+     * @param n number of threads
      */
     public static void setNumberOfThreads(int n) {
         NTHREADS = prevPow2(n);
@@ -240,7 +240,7 @@ public class ConcurrencyUtils {
     /**
      * Returns the closest power-of-two number greater than or equal to x.
      *
-     * @param x
+     * @param x input value
      * @return the closest power-of-two number greater than or equal to x
      */
     public static int nextPow2(int x) {
@@ -261,7 +261,7 @@ public class ConcurrencyUtils {
     /**
      * Returns the closest power-of-two number greater than or equal to x.
      *
-     * @param x
+     * @param x input value
      * @return the closest power-of-two number greater than or equal to x
      */
     public static long nextPow2(long x) {
@@ -283,7 +283,7 @@ public class ConcurrencyUtils {
     /**
      * Returns the closest power-of-two number less than or equal to x.
      *
-     * @param x
+     * @param x input value
      * @return the closest power-of-two number less then or equal to x
      */
     public static int prevPow2(int x) {
@@ -296,7 +296,7 @@ public class ConcurrencyUtils {
     /**
      * Returns the closest power-of-two number less than or equal to x.
      *
-     * @param x
+     * @param x input value 
      * @return the closest power-of-two number less then or equal to x
      */
     public static long prevPow2(long x) {
@@ -309,7 +309,7 @@ public class ConcurrencyUtils {
     /**
      * Checks if x is a power-of-two number.
      *
-     * @param x
+     * @param x input value
      * @return true if x is a power-of-two number
      */
     public static boolean isPowerOf2(int x) {
@@ -323,7 +323,7 @@ public class ConcurrencyUtils {
     /**
      * Checks if x is a power-of-two number.
      *
-     * @param x
+     * @param x input value
      * @return true if x is a power-of-two number
      */
     public static boolean isPowerOf2(long x) {
@@ -338,7 +338,7 @@ public class ConcurrencyUtils {
      * Causes the currently executing thread to sleep (temporarily cease
      * execution) for the specified number of milliseconds.
      *
-     * @param millis
+     * @param millis the length of time to sleep in milliseconds
      */
     public static void sleep(long millis) {
         try {
@@ -362,7 +362,7 @@ public class ConcurrencyUtils {
     /**
      * Waits for all threads to complete computation.
      *
-     * @param futures
+     * @param futures array of Future objects 
      */
     public static void waitForCompletion(Future<?>[] futures) {
         int size = futures.length;

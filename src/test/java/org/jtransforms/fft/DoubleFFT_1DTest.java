@@ -54,7 +54,6 @@ import pl.edu.icm.jlargearrays.DoubleLargeArray;
  *
  * @author S&eacute;bastien Brisard
  * @author Piotr Wendykier
- *
  */
 @RunWith(value = Parameterized.class)
 public class DoubleFFT_1DTest

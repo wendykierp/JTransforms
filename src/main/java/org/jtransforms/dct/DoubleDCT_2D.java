@@ -38,9 +38,9 @@ import pl.edu.icm.jlargearrays.DoubleLargeArray;
  * <br>
  * Part of the code is derived from General Purpose FFT Package written by
  * Takuya Ooura (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html)
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
+ * 
  */
 public class DoubleDCT_2D {
 
@@ -60,7 +60,7 @@ public class DoubleDCT_2D {
 
     /**
      * Creates new instance of DoubleDCT_2D.
-     * <p>
+     * 
      * @param rows number of rows
      * @param columns number of columns
      */
@@ -94,7 +94,7 @@ public class DoubleDCT_2D {
     /**
      * Computes 2D forward DCT (DCT-II) leaving the result in <code>a</code>.
      * The data is stored in 1D array in row-major order.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -167,7 +167,7 @@ public class DoubleDCT_2D {
     /**
      * Computes 2D forward DCT (DCT-II) leaving the result in <code>a</code>.
      * The data is stored in 1D array in row-major order.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -240,7 +240,7 @@ public class DoubleDCT_2D {
     /**
      * Computes 2D forward DCT (DCT-II) leaving the result in <code>a</code>.
      * The data is stored in 2D array.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -313,7 +313,7 @@ public class DoubleDCT_2D {
     /**
      * Computes 2D inverse DCT (DCT-III) leaving the result in <code>a</code>.
      * The data is stored in 1D array in row-major order.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -386,7 +386,7 @@ public class DoubleDCT_2D {
     /**
      * Computes 2D inverse DCT (DCT-III) leaving the result in <code>a</code>.
      * The data is stored in 1D array in row-major order.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -459,7 +459,7 @@ public class DoubleDCT_2D {
     /**
      * Computes 2D inverse DCT (DCT-III) leaving the result in <code>a</code>.
      * The data is stored in 2D array.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */

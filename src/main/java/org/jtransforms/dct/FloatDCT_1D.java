@@ -41,9 +41,8 @@ import pl.edu.icm.jlargearrays.Utilities;
  * <br>
  * Part of the code is derived from General Purpose FFT Package written by Takuya Ooura
  * (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html)
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
  */
 public class FloatDCT_1D
 {
@@ -78,8 +77,8 @@ public class FloatDCT_1D
 
     /**
      * Creates new instance of FloatDCT_1D.
-     * <p>
-     * @param n
+     * 
+     * @param n size of data
      *
      */
     public FloatDCT_1D(long n)
@@ -138,7 +137,7 @@ public class FloatDCT_1D
 
     /**
      * Computes 1D forward DCT (DCT-II) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *              data to transform
      * @param scale
@@ -151,7 +150,7 @@ public class FloatDCT_1D
 
     /**
      * Computes 1D forward DCT (DCT-II) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *              data to transform
      * @param scale
@@ -164,7 +163,7 @@ public class FloatDCT_1D
 
     /**
      * Computes 1D forward DCT (DCT-II) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *              data to transform
      * @param offa
@@ -245,7 +244,7 @@ public class FloatDCT_1D
 
     /**
      * Computes 1D forward DCT (DCT-II) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *              data to transform
      * @param offa
@@ -330,7 +329,7 @@ public class FloatDCT_1D
 
     /**
      * Computes 1D inverse DCT (DCT-III) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *              data to transform
      * @param scale
@@ -343,7 +342,7 @@ public class FloatDCT_1D
 
     /**
      * Computes 1D inverse DCT (DCT-III) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *              data to transform
      * @param scale
@@ -356,7 +355,7 @@ public class FloatDCT_1D
 
     /**
      * Computes 1D inverse DCT (DCT-III) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *              data to transform
      * @param offa
@@ -436,7 +435,7 @@ public class FloatDCT_1D
 
     /**
      * Computes 1D inverse DCT (DCT-III) leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *              data to transform
      * @param offa

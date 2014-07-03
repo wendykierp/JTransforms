@@ -33,9 +33,8 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
 
 /**
  * Benchmark of single precision FFT's
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
  */
 public class BenchmarkFloatFFT
 {

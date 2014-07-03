@@ -37,9 +37,8 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
  * <br>
  * Part of code is derived from General Purpose FFT Package written by Takuya
  * Ooura (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html)
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
  */
 public class FloatDHT_3D {
 
@@ -71,7 +70,7 @@ public class FloatDHT_3D {
 
     /**
      * Creates new instance of FloatDHT_3D.
-     * <p>
+     * 
      * @param slices number of slices
      * @param rows number of rows
      * @param columns number of columns
@@ -123,7 +122,7 @@ public class FloatDHT_3D {
      * 3D array x[slices][rows][columns] is stored in a[i*sliceStride +
      * j*rowStride + k], where sliceStride = rows * columns and rowStride =
      * columns.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void forward(final float[] a) {
@@ -262,7 +261,7 @@ public class FloatDHT_3D {
      * 3D array x[slices][rows][columns] is stored in a[i*sliceStride +
      * j*rowStride + k], where sliceStride = rows * columns and rowStride =
      * columns.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void forward(final FloatLargeArray a) {
@@ -397,7 +396,7 @@ public class FloatDHT_3D {
     /**
      * Computes the 3D real, forward DHT leaving the result in <code>a</code>.
      * The data is stored in 3D array.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void forward(final float[][][] a) {
@@ -517,7 +516,7 @@ public class FloatDHT_3D {
      * 3D array x[slices][rows][columns] is stored in a[i*sliceStride +
      * j*rowStride + k], where sliceStride = rows * columns and rowStride =
      * columns.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -652,7 +651,7 @@ public class FloatDHT_3D {
      * 3D array x[slices][rows][columns] is stored in a[i*sliceStride +
      * j*rowStride + k], where sliceStride = rows * columns and rowStride =
      * columns.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -783,7 +782,7 @@ public class FloatDHT_3D {
     /**
      * Computes the 3D real, inverse DHT leaving the result in <code>a</code>.
      * The data is stored in 3D array.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */

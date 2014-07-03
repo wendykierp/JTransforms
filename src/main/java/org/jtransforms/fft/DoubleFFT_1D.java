@@ -42,9 +42,8 @@ import pl.edu.icm.jlargearrays.Utilities;
  * This code is derived from General Purpose FFT Package written by Takuya Ooura
  * (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html) and from JFFTPack written
  * by Baoshe Zhang (http://jfftpack.sourceforge.net/)
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
  */
 public final class DoubleFFT_1D {
 
@@ -105,7 +104,7 @@ public final class DoubleFFT_1D {
 
     /**
      * Creates new instance of DoubleFFT_1D.
-     * <p>
+     * 
      * @param n size of data
      */
     public DoubleFFT_1D(long n) {
@@ -188,12 +187,11 @@ public final class DoubleFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[2*k] = Re[k], a[2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      */
     public void complexForward(double[] a) {
@@ -206,12 +204,11 @@ public final class DoubleFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[2*k] = Re[k], a[2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      */
     public void complexForward(DoubleLargeArray a) {
@@ -224,12 +221,11 @@ public final class DoubleFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[offa+2*k] = Re[k], a[offa+2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      */
@@ -260,12 +256,11 @@ public final class DoubleFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[offa+2*k] = Re[k], a[offa+2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      */
@@ -300,12 +295,11 @@ public final class DoubleFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[2*k] = Re[k], a[2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -319,12 +313,11 @@ public final class DoubleFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[2*k] = Re[k], a[2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -338,12 +331,11 @@ public final class DoubleFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[offa+2*k] = Re[k], a[offa+2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
@@ -378,12 +370,11 @@ public final class DoubleFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[offa+2*k] = Re[k], a[offa+2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
@@ -419,28 +410,26 @@ public final class DoubleFFT_1D {
     /**
      * Computes 1D forward DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the output data is as follows:<br>
-     * <p>
+     * 
      * if n is even then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[2*k] = Re[k], 0&lt;=k&lt;n/2 a[2*k+1] = Im[k], 0&lt;k&lt;n/2 a[1] =
      * Re[n/2]
      * </pre>
-     * <p>
+     * 
      * if n is odd then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2
      * a[1] = Im[(n-1)/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForward(double[] a) {
@@ -450,28 +439,26 @@ public final class DoubleFFT_1D {
     /**
      * Computes 1D forward DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the output data is as follows:<br>
-     * <p>
+     * 
      * if n is even then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[2*k] = Re[k], 0&lt;=k&lt;n/2 a[2*k+1] = Im[k], 0&lt;k&lt;n/2 a[1] =
      * Re[n/2]
      * </pre>
-     * <p>
+     * 
      * if n is odd then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2
      * a[1] = Im[(n-1)/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForward(DoubleLargeArray a) {
@@ -481,28 +468,26 @@ public final class DoubleFFT_1D {
     /**
      * Computes 1D forward DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the output data is as follows:<br>
-     * <p>
+     * 
      * if n is even then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[offa+2*k] = Re[k], 0&lt;=k&lt;n/2 a[offa+2*k+1] = Im[k], 0&lt;k&lt;n/2
      * a[offa+1] = Re[n/2]
      * </pre>
-     * <p>
+     * 
      * if n is odd then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[offa+2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[offa+2*k+1] = Im[k],
      * 0&lt;k&lt;(n-1)/2 a[offa+1] = Im[(n-1)/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      */
@@ -547,28 +532,26 @@ public final class DoubleFFT_1D {
     /**
      * Computes 1D forward DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the output data is as follows:<br>
-     * <p>
+     * 
      * if n is even then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[offa+2*k] = Re[k], 0&lt;=k&lt;n/2 a[offa+2*k+1] = Im[k], 0&lt;k&lt;n/2
      * a[offa+1] = Re[n/2]
      * </pre>
-     * <p>
+     * 
      * if n is odd then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[offa+2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[offa+2*k+1] = Im[k],
      * 0&lt;k&lt;(n-1)/2 a[offa+1] = Im[(n-1)/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      */
@@ -622,7 +605,7 @@ public final class DoubleFFT_1D {
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data. To get back the original data,
      * use <code>complexInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForwardFull(double[] a) {
@@ -637,7 +620,7 @@ public final class DoubleFFT_1D {
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data. To get back the original data,
      * use <code>complexInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForwardFull(DoubleLargeArray a) {
@@ -652,7 +635,7 @@ public final class DoubleFFT_1D {
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data. To get back the original data,
      * use <code>complexInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      */
@@ -734,7 +717,7 @@ public final class DoubleFFT_1D {
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data. To get back the original data,
      * use <code>complexInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      */
@@ -815,31 +798,29 @@ public final class DoubleFFT_1D {
     /**
      * Computes 1D inverse DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the input data has to be as follows:<br>
-     * <p>
+     * 
      * if n is even then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[2*k] = Re[k], 0&lt;=k&lt;n/2 a[2*k+1] = Im[k], 0&lt;k&lt;n/2 a[1] =
      * Re[n/2]
      * </pre>
-     * <p>
+     * 
      * if n is odd then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2
      * a[1] = Im[(n-1)/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * <p>
+     * 
      * @param a data to transform
-     * <p>
+     * 
      * @param scale if true then scaling is performed
-     * <p>
+     * 
      */
     public void realInverse(double[] a, boolean scale) {
         realInverse(a, 0, scale);
@@ -848,31 +829,29 @@ public final class DoubleFFT_1D {
     /**
      * Computes 1D inverse DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the input data has to be as follows:<br>
-     * <p>
+     * 
      * if n is even then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[2*k] = Re[k], 0&lt;=k&lt;n/2 a[2*k+1] = Im[k], 0&lt;k&lt;n/2 a[1] =
      * Re[n/2]
      * </pre>
-     * <p>
+     * 
      * if n is odd then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2
      * a[1] = Im[(n-1)/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * <p>
+     * 
      * @param a data to transform
-     * <p>
+     * 
      * @param scale if true then scaling is performed
-     * <p>
+     * 
      */
     public void realInverse(DoubleLargeArray a, boolean scale) {
         realInverse(a, 0, scale);
@@ -881,31 +860,29 @@ public final class DoubleFFT_1D {
     /**
      * Computes 1D inverse DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the input data has to be as follows:<br>
-     * <p>
+     * 
      * if n is even then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[offa+2*k] = Re[k], 0&lt;=k&lt;n/2 a[offa+2*k+1] = Im[k], 0&lt;k&lt;n/2
      * a[offa+1] = Re[n/2]
      * </pre>
-     * <p>
+     * 
      * if n is odd then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[offa+2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[offa+2*k+1] = Im[k],
      * 0&lt;k&lt;(n-1)/2 a[offa+1] = Im[(n-1)/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
-     * <p>
+     * 
      */
     public void realInverse(double[] a, int offa, boolean scale) {
         if (useLargeArrays) {
@@ -954,31 +931,29 @@ public final class DoubleFFT_1D {
     /**
      * Computes 1D inverse DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the input data has to be as follows:<br>
-     * <p>
+     * 
      * if n is even then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[offa+2*k] = Re[k], 0&lt;=k&lt;n/2 a[offa+2*k+1] = Im[k], 0&lt;k&lt;n/2
      * a[offa+1] = Re[n/2]
      * </pre>
-     * <p>
+     * 
      * if n is odd then
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[offa+2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[offa+2*k+1] = Im[k],
      * 0&lt;k&lt;(n-1)/2 a[offa+1] = Im[(n-1)/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
-     * <p>
+     * 
      */
     public void realInverse(DoubleLargeArray a, long offa, boolean scale) {
         if (!useLargeArrays) {
@@ -1035,7 +1010,7 @@ public final class DoubleFFT_1D {
      * imaginary part equal 0. Because the result is stored in <code>a</code>,
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -1050,7 +1025,7 @@ public final class DoubleFFT_1D {
      * imaginary part equal 0. Because the result is stored in <code>a</code>,
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -1065,7 +1040,7 @@ public final class DoubleFFT_1D {
      * imaginary part equal 0. Because the result is stored in <code>a</code>,
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
@@ -1153,7 +1128,7 @@ public final class DoubleFFT_1D {
      * imaginary part equal 0. Because the result is stored in <code>a</code>,
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed

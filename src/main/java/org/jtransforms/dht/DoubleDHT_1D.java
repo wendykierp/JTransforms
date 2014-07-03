@@ -37,7 +37,7 @@ import pl.edu.icm.jlargearrays.Utilities;
  * Computes 1D Discrete Hartley Transform (DHT) of real, double precision data.
  * The size of the data can be an arbitrary number. It uses FFT algorithm. This
  * is a parallel implementation optimized for SMP systems.
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
  */
 public class DoubleDHT_1D {
@@ -49,7 +49,7 @@ public class DoubleDHT_1D {
 
     /**
      * Creates new instance of DoubleDHT_1D.
-     * <p>
+     * 
      * @param n size of data
      */
     public DoubleDHT_1D(long n) {
@@ -61,7 +61,7 @@ public class DoubleDHT_1D {
 
     /**
      * Computes 1D real, forward DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void forward(double[] a) {
@@ -70,7 +70,7 @@ public class DoubleDHT_1D {
 
     /**
      * Computes 1D real, forward DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void forward(DoubleLargeArray a) {
@@ -79,7 +79,7 @@ public class DoubleDHT_1D {
 
     /**
      * Computes 1D real, forward DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      */
@@ -137,7 +137,7 @@ public class DoubleDHT_1D {
 
     /**
      * Computes 1D real, forward DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      */
@@ -199,7 +199,7 @@ public class DoubleDHT_1D {
 
     /**
      * Computes 1D real, inverse DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -209,7 +209,7 @@ public class DoubleDHT_1D {
 
     /**
      * Computes 1D real, inverse DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param scale if true then scaling is performed
      */
@@ -219,7 +219,7 @@ public class DoubleDHT_1D {
 
     /**
      * Computes 1D real, inverse DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
@@ -240,7 +240,7 @@ public class DoubleDHT_1D {
 
     /**
      * Computes 1D real, inverse DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a data to transform
      * @param offa index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed

@@ -37,7 +37,7 @@ import pl.edu.icm.jlargearrays.Utilities;
  * Computes 1D Discrete Hartley Transform (DHT) of real, single precision data.
  * The size of the data can be an arbitrary number. It uses FFT algorithm. This
  * is a parallel implementation optimized for SMP systems.
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
  */
 public class FloatDHT_1D
@@ -50,7 +50,7 @@ public class FloatDHT_1D
 
     /**
      * Creates new instance of FloatDHT_1D.
-     * <p>
+     * 
      * @param n
      *                       size of data
 
@@ -65,7 +65,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, forward DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *          data to transform
      */
@@ -76,7 +76,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, forward DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *          data to transform
      */
@@ -87,7 +87,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, forward DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *             data to transform
      * @param offa
@@ -149,7 +149,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, forward DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *             data to transform
      * @param offa
@@ -215,7 +215,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, inverse DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *              data to transform
      * @param scale
@@ -228,7 +228,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, inverse DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *              data to transform
      * @param scale
@@ -241,7 +241,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, inverse DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *              data to transform
      * @param offa
@@ -265,7 +265,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, inverse DHT leaving the result in <code>a</code>.
-     * <p>
+     * 
      * @param a
      *              data to transform
      * @param offa

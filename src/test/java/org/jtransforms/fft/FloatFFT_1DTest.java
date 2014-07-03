@@ -53,7 +53,6 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
  *
  * @author S&eacute;bastien Brisard
  * @author Piotr Wendykier
- *
  */
 @RunWith(value = Parameterized.class)
 public class FloatFFT_1DTest {

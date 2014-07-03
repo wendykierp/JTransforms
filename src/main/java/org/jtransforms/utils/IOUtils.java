@@ -49,6 +49,14 @@ public class IOUtils
 
     }
 
+    /**
+     * Computes root mean square error between a and b.
+     *
+     * @param a input parameter
+     * @param b input parameter
+     *
+     * @return root mean squared error between a and b
+     */
     public static double computeRMSE(float a, float b)
     {
         double tmp = a - b;
@@ -56,6 +64,14 @@ public class IOUtils
         return Math.sqrt(rms);
     }
 
+    /**
+     * Computes root mean square error between a and b.
+     *
+     * @param a input parameter
+     * @param b input parameter
+     *
+     * @return root mean squared error between a and b
+     */
     public static double computeRMSE(float[] a, float[] b)
     {
         if (a.length != b.length) {
@@ -70,6 +86,14 @@ public class IOUtils
         return Math.sqrt(rms / a.length);
     }
 
+    /**
+     * Computes root mean square error between a and b.
+     *
+     * @param a input parameter
+     * @param b input parameter
+     *
+     * @return root mean squared error between a and b
+     */
     public static double computeRMSE(FloatLargeArray a, FloatLargeArray b)
     {
         if (a.length() != b.length()) {
@@ -84,6 +108,14 @@ public class IOUtils
         return Math.sqrt(rms / (double) a.length());
     }
 
+    /**
+     * Computes root mean square error between a and b.
+     *
+     * @param a input parameter
+     * @param b input parameter
+     *
+     * @return root mean squared error between a and b
+     */
     public static double computeRMSE(float[][] a, float[][] b)
     {
         if (a.length != b.length || a[0].length != b[0].length) {
@@ -100,6 +132,14 @@ public class IOUtils
         return Math.sqrt(rms / (a.length * a[0].length));
     }
 
+    /**
+     * Computes root mean square error between a and b.
+     *
+     * @param a input parameter
+     * @param b input parameter
+     *
+     * @return root mean squared error between a and b
+     */
     public static double computeRMSE(float[][][] a, float[][][] b)
     {
         if (a.length != b.length || a[0].length != b[0].length || a[0][0].length != b[0][0].length) {
@@ -118,6 +158,14 @@ public class IOUtils
         return Math.sqrt(rms / (a.length * a[0].length * a[0][0].length));
     }
 
+    /**
+     * Computes root mean square error between a and b.
+     *
+     * @param a input parameter
+     * @param b input parameter
+     *
+     * @return root mean squared error between a and b
+     */
     public static double computeRMSE(double a, double b)
     {
         double tmp = a - b;
@@ -125,6 +173,14 @@ public class IOUtils
         return Math.sqrt(rms);
     }
 
+    /**
+     * Computes root mean square error between a and b.
+     *
+     * @param a input parameter
+     * @param b input parameter
+     *
+     * @return root mean squared error between a and b
+     */
     public static double computeRMSE(double[] a, double[] b)
     {
         if (a.length != b.length) {
@@ -139,6 +195,14 @@ public class IOUtils
         return Math.sqrt(rms / a.length);
     }
 
+    /**
+     * Computes root mean square error between a and b.
+     *
+     * @param a input parameter
+     * @param b input parameter
+     *
+     * @return root mean squared error between a and b
+     */
     public static double computeRMSE(DoubleLargeArray a, DoubleLargeArray b)
     {
         if (a.length() != b.length()) {
@@ -153,6 +217,14 @@ public class IOUtils
         return Math.sqrt(rms / (double) a.length());
     }
 
+    /**
+     * Computes root mean square error between a and b.
+     *
+     * @param a input parameter
+     * @param b input parameter
+     *
+     * @return root mean squared error between a and b
+     */
     public static double computeRMSE(double[][] a, double[][] b)
     {
         if (a.length != b.length || a[0].length != b[0].length) {
@@ -169,6 +241,14 @@ public class IOUtils
         return Math.sqrt(rms / (a.length * a[0].length));
     }
 
+    /**
+     * Computes root mean square error between a and b.
+     *
+     * @param a input parameter
+     * @param b input parameter
+     *
+     * @return root mean squared error between a and b
+     */
     public static double computeRMSE(double[][][] a, double[][][] b)
     {
         if (a.length != b.length || a[0].length != b[0].length || a[0][0].length != b[0][0].length) {
@@ -255,7 +335,7 @@ public class IOUtils
         Random r = new Random(2);
         for (int i = 0; i < n1; i++) {
             for (int j = 0; j < n2; j++) {
-                m[(int)(i * n2 + j)] = r.nextDouble();
+                m[(int) (i * n2 + j)] = r.nextDouble();
             }
         }
     }
@@ -306,7 +386,7 @@ public class IOUtils
         Random r = new Random(2);
         for (int i = 0; i < n1; i++) {
             for (int j = 0; j < n2; j++) {
-                m[(int)(i * n2 + j)] = r.nextFloat();
+                m[(int) (i * n2 + j)] = r.nextFloat();
             }
         }
     }
@@ -361,7 +441,7 @@ public class IOUtils
         for (int i = 0; i < n1; i++) {
             for (int j = 0; j < n2; j++) {
                 for (int k = 0; k < n3; k++) {
-                    m[(int)(i * sliceStride + j * rowStride + k)] = r.nextDouble();
+                    m[(int) (i * sliceStride + j * rowStride + k)] = r.nextDouble();
                 }
             }
         }
@@ -427,7 +507,7 @@ public class IOUtils
         for (int i = 0; i < n1; i++) {
             for (int j = 0; j < n2; j++) {
                 for (int k = 0; k < n3; k++) {
-                    m[(int)(i * sliceStride + j * rowStride + k)] = r.nextFloat();
+                    m[(int) (i * sliceStride + j * rowStride + k)] = r.nextFloat();
                 }
             }
         }
@@ -478,8 +558,8 @@ public class IOUtils
      * array. Complex data is represented by 2 double values in sequence: the
      * real and imaginary parts.
      *
-     * @param x
-     * @param title
+     * @param x     input array
+     * @param title title of the array
      */
     public static void showComplex_1D(double[] x, String title)
     {
@@ -508,14 +588,14 @@ public class IOUtils
      * array. Complex data is represented by 2 double values in sequence: the
      * real and imaginary parts.
      *
-     * @param rows
-     * @param columns
-     * @param x
-     * @param title
+     * @param rows    number of rows in the input array
+     * @param columns number of columns in the input array
+     * @param x       input array
+     * @param title   title of the array
      */
     public static void showComplex_2D(int rows, int columns, double[] x, String title)
     {
-        StringBuffer s = new StringBuffer(String.format(title + ": complex array 2D: %d rows, %d columns\n\n", rows, columns));
+        StringBuilder s = new StringBuilder(String.format(title + ": complex array 2D: %d rows, %d columns\n\n", rows, columns));
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < 2 * columns; c = c + 2) {
                 if (x[r * 2 * columns + c + 1] == 0) {
@@ -542,16 +622,14 @@ public class IOUtils
      * array. Complex data is represented by 2 double values in sequence: the
      * real and imaginary parts.
      *
-     * @param rows
-     * @param columns
-     * @param x
-     * @param title
+     * @param x     input array
+     * @param title title of the array
      */
     public static void showComplex_2D(double[][] x, String title)
     {
         int rows = x.length;
         int columns = x[0].length;
-        StringBuffer s = new StringBuffer(String.format(title + ": complex array 2D: %d rows, %d columns\n\n", rows, columns));
+        StringBuilder s = new StringBuilder(String.format(title + ": complex array 2D: %d rows, %d columns\n\n", rows, columns));
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < columns; c = c + 2) {
                 if (x[r][c + 1] == 0) {
@@ -578,11 +656,11 @@ public class IOUtils
      * array. Complex data is represented by 2 double values in sequence: the
      * real and imaginary parts.
      *
-     * @param n1
-     * @param n2
-     * @param n3
-     * @param x
-     * @param title
+     * @param n1    first dimension
+     * @param n2    second dimension
+     * @param n3    third dimension
+     * @param x     input array
+     * @param title title of the array
      */
     public static void showComplex_3D(int n1, int n2, int n3, double[] x, String title)
     {
@@ -620,21 +698,20 @@ public class IOUtils
      * Displays elements of <code>x</code>. Complex data is represented by 2
      * double values in sequence: the real and imaginary parts.
      *
-     * @param n1
-     * @param n2
-     * @param n3
-     * @param x
-     * @param title
+     * @param x     input array
+     * @param title title of the array
      */
-    public static void showComplex_3D(int n1, int n2, int n3, double[][][] x, String title)
+    public static void showComplex_3D(double[][][] x, String title)
     {
         System.out.println(title);
         System.out.println("-------------------");
-
-        for (int k = 0; k < 2 * n3; k = k + 2) {
+        int slices = x.length;
+        int rows = x[0].length;
+        int columns = x[0][0].length;
+        for (int k = 0; k < columns; k = k + 2) {
             System.out.println("(:,:," + k / 2 + ")=\n");
-            for (int i = 0; i < n1; i++) {
-                for (int j = 0; j < n2; j++) {
+            for (int i = 0; i < slices; i++) {
+                for (int j = 0; j < rows; j++) {
                     if (x[i][j][k + 1] == 0) {
                         System.out.print(String.format(FF, x[i][j][k]) + "\t");
                         continue;
@@ -660,11 +737,11 @@ public class IOUtils
      * array. Complex data is represented by 2 double values in sequence: the
      * real and imaginary parts.
      *
-     * @param n1
-     * @param n2
-     * @param n3
-     * @param x
-     * @param title
+     * @param n1    first dimension
+     * @param n2    second dimension
+     * @param n3    third dimension
+     * @param x     input array
+     * @param title title of the array
      */
     public static void showComplex_3D(int n1, int n2, int n3, float[] x, String title)
     {
@@ -701,8 +778,8 @@ public class IOUtils
     /**
      * Displays elements of <code>x</code>, assuming that it is 1D real array.
      *
-     * @param x
-     * @param title
+     * @param x     input array
+     * @param title title of the array
      */
     public static void showReal_1D(double[] x, String title)
     {
@@ -717,10 +794,11 @@ public class IOUtils
     /**
      * Displays elements of <code>x</code>, assuming that it is 2D real array.
      *
-     * @param n1
-     * @param n2
-     * @param x
-     * @param title
+     * @param n1    first dimension
+     * @param n2    second dimension
+     * @param x     input array
+     * @param title title of the array
+     *
      */
     public static void showReal_2D(int n1, int n2, double[] x, String title)
     {
@@ -742,11 +820,12 @@ public class IOUtils
     /**
      * Displays elements of <code>x</code>, assuming that it is 3D real array.
      *
-     * @param n1
-     * @param n2
-     * @param n3
-     * @param x
-     * @param title
+     *
+     * @param n1    first dimension
+     * @param n2    second dimension
+     * @param n3    third dimension
+     * @param x     input array
+     * @param title title of the array
      */
     public static void showReal_3D(int n1, int n2, int n3, double[] x, String title)
     {
@@ -776,23 +855,22 @@ public class IOUtils
     /**
      * Displays elements of <code>x</code>.
      *
-     * @param n1
-     * @param n2
-     * @param n3
-     * @param x
-     * @param title
+     * @param x     input array
+     * @param title title of the array
      */
-    public static void showReal_3D(int n1, int n2, int n3, double[][][] x, String title)
+    public static void showReal_3D(double[][][] x, String title)
     {
 
         System.out.println(title);
         System.out.println("-------------------");
-
-        for (int k = 0; k < n3; k++) {
+        int slices = x.length;
+        int rows = x[0].length;
+        int columns = x[0][0].length;
+        for (int k = 0; k < columns; k++) {
             System.out.println();
             System.out.println("(:,:," + k + ")=\n");
-            for (int i = 0; i < n1; i++) {
-                for (int j = 0; j < n2; j++) {
+            for (int i = 0; i < slices; i++) {
+                for (int j = 0; j < rows; j++) {
                     if (Math.abs(x[i][j][k]) <= 5e-5) {
                         System.out.print("0\t");
                     } else {
@@ -810,8 +888,8 @@ public class IOUtils
      * assuming that it is 1D complex array. Complex data is represented by 2
      * double values in sequence: the real and imaginary parts.
      *
-     * @param x
-     * @param filename
+     * @param x        input array
+     * @param filename finename
      */
     public static void writeToFileComplex_1D(double[] x, String filename)
     {
@@ -848,8 +926,8 @@ public class IOUtils
      * assuming that it is 1D complex array. Complex data is represented by 2
      * double values in sequence: the real and imaginary parts.
      *
-     * @param x
-     * @param filename
+     * @param x        input array
+     * @param filename finename
      */
     public static void writeToFileComplex_1D(float[] x, String filename)
     {
@@ -886,10 +964,10 @@ public class IOUtils
      * assuming that it is 2D complex array. Complex data is represented by 2
      * double values in sequence: the real and imaginary parts.
      *
-     * @param n1
-     * @param n2
-     * @param x
-     * @param filename
+     * @param n1       first dimension
+     * @param n2       second dimension
+     * @param x        input array
+     * @param filename finename
      */
     public static void writeToFileComplex_2D(int n1, int n2, double[] x, String filename)
     {
@@ -943,10 +1021,10 @@ public class IOUtils
      * assuming that it is 2D complex array. Complex data is represented by 2
      * double values in sequence: the real and imaginary parts.
      *
-     * @param n1
-     * @param n2
-     * @param x
-     * @param filename
+     * @param n1       first dimension
+     * @param n2       second dimension
+     * @param x        input array
+     * @param filename finename
      */
     public static void writeToFileComplex_2D(int n1, int n2, float[] x, String filename)
     {
@@ -1000,13 +1078,13 @@ public class IOUtils
      * data is represented by 2 double values in sequence: the real and
      * imaginary parts.
      *
-     * @param n1
-     * @param n2
-     * @param x
-     * @param filename
+     * @param x        input array
+     * @param filename finename
      */
-    public static void writeToFileComplex_2D(int n1, int n2, double[][] x, String filename)
+    public static void writeToFileComplex_2D(double[][] x, String filename)
     {
+        int n1 = x.length;
+        int n2 = x[0].length;
         try {
             BufferedWriter out = new BufferedWriter(new FileWriter(filename));
             for (int i = 0; i < n1; i++) {
@@ -1057,11 +1135,11 @@ public class IOUtils
      * assuming that it is 3D complex array. Complex data is represented by 2
      * double values in sequence: the real and imaginary parts.
      *
-     * @param n1
-     * @param n2
-     * @param n3
-     * @param x
-     * @param filename
+     * @param n1       first dimension
+     * @param n2       second dimension
+     * @param n3       third dimension
+     * @param x        input array
+     * @param filename finename
      */
     public static void writeToFileComplex_3D(int n1, int n2, int n3, double[] x, String filename)
     {
@@ -1105,14 +1183,14 @@ public class IOUtils
      * data is represented by 2 double values in sequence: the real and
      * imaginary parts.
      *
-     * @param n1
-     * @param n2
-     * @param n3
-     * @param x
-     * @param filename
+     * @param x        input array
+     * @param filename finename
      */
-    public static void writeToFileComplex_3D(int n1, int n2, int n3, double[][][] x, String filename)
+    public static void writeToFileComplex_3D(double[][][] x, String filename)
     {
+        int n1 = x.length;
+        int n2 = x[0].length;
+        int n3 = x[0][0].length;
         try {
             BufferedWriter out = new BufferedWriter(new FileWriter(filename));
             for (int k = 0; k < 2 * n3; k = k + 2) {
@@ -1150,8 +1228,8 @@ public class IOUtils
      * Saves elements of <code>x</code> in a file <code>filename</code>,
      * assuming that it is 2D real array.
      *
-     * @param x
-     * @param filename
+     * @param x        input array
+     * @param filename finename
      */
     public static void writeToFileReal_1D(double[] x, String filename)
     {
@@ -1171,8 +1249,8 @@ public class IOUtils
      * Saves elements of <code>x</code> in a file <code>filename</code>,
      * assuming that it is 2D real array.
      *
-     * @param x
-     * @param filename
+     * @param x        input array
+     * @param filename finename
      */
     public static void writeToFileReal_1D(float[] x, String filename)
     {
@@ -1192,10 +1270,10 @@ public class IOUtils
      * Saves elements of <code>x</code> in a file <code>filename</code>,
      * assuming that it is 2D real array.
      *
-     * @param n1
-     * @param n2
-     * @param x
-     * @param filename
+     * @param n1       first dimension
+     * @param n2       second dimension
+     * @param x        input array
+     * @param filename finename
      */
     public static void writeToFileReal_2D(int n1, int n2, double[] x, String filename)
     {
@@ -1221,10 +1299,10 @@ public class IOUtils
      * Saves elements of <code>x</code> in a file <code>filename</code>,
      * assuming that it is 2D real array.
      *
-     * @param n1
-     * @param n2
-     * @param x
-     * @param filename
+     * @param n1       first dimension
+     * @param n2       second dimension
+     * @param x        input array
+     * @param filename finename
      */
     public static void writeToFileReal_2D(int n1, int n2, float[] x, String filename)
     {
@@ -1250,11 +1328,11 @@ public class IOUtils
      * Saves elements of <code>x</code> in a file <code>filename</code>,
      * assuming that it is 3D real array.
      *
-     * @param n1
-     * @param n2
-     * @param n3
-     * @param x
-     * @param filename
+     * @param n1       first dimension
+     * @param n2       second dimension
+     * @param n3       third dimension
+     * @param x        input array
+     * @param filename finename
      */
     public static void writeToFileReal_3D(int n1, int n2, int n3, double[] x, String filename)
     {
@@ -1285,13 +1363,14 @@ public class IOUtils
     /**
      * Saves benchmark results in a file.
      *
-     * @param filename
-     * @param nthread
-     * @param niter
-     * @param doWarmup
-     * @param doScaling
-     * @param times
-     * @param sizes
+     * @param filename                  filename
+     * @param nthread                   number of threads
+     * @param niter                     number of iterations
+     * @param doWarmup                  if warmup was performed
+     * @param doScaling                 if scaling was performed
+     * @param sizes                     benchmarked sizes
+     * @param times_without_constructor timings excluding constructor
+     * @param times_with_constructor    timings including constructor
      */
     public static void writeFFTBenchmarkResultsToFile(String filename, int nthread, int niter, boolean doWarmup, boolean doScaling, long[] sizes, double[] times_without_constructor, double[] times_with_constructor)
     {

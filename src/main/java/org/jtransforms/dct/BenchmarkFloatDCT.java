@@ -33,9 +33,8 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
 
 /**
  * Benchmark of single precision DCT's
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
  */
 public class BenchmarkFloatDCT
 {

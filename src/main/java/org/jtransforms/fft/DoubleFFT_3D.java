@@ -39,9 +39,8 @@ import pl.edu.icm.jlargearrays.Utilities;
  * <br>
  * Part of the code is derived from General Purpose FFT Package written by
  * Takuya Ooura (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html)
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
  */
 public class DoubleFFT_3D
 {
@@ -74,11 +73,11 @@ public class DoubleFFT_3D
 
     /**
      * Creates new instance of DoubleFFT_3D.
-     * <p>
+     * 
      * @param slices  number of slices
      * @param rows    number of rows
      * @param columns number of columns
-     * <p>
+     * 
      */
     public DoubleFFT_3D(long slices, long rows, long columns)
     {
@@ -132,14 +131,13 @@ public class DoubleFFT_3D
      * double values in sequence: the real and imaginary part, i.e. the input
      * array must be of size slices*rows*2*columns. The physical layout of the
      * input data is as follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3],
      * a[k1*sliceStride + k2*rowStride + 2*k3+1] = Im[k1][k2][k3],
      * 0&lt;=k1&lt;slices, 0&lt;=k2&lt;rows, 0&lt;=k3&lt;columns,
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      */
     public void complexForward(final double[] a)
@@ -316,14 +314,13 @@ public class DoubleFFT_3D
      * double values in sequence: the real and imaginary part, i.e. the input
      * array must be of size slices*rows*2*columns. The physical layout of the
      * input data is as follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3],
      * a[k1*sliceStride + k2*rowStride + 2*k3+1] = Im[k1][k2][k3],
      * 0&lt;=k1&lt;slices, 0&lt;=k2&lt;rows, 0&lt;=k3&lt;columns,
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      */
     public void complexForward(final DoubleLargeArray a)
@@ -496,13 +493,12 @@ public class DoubleFFT_3D
      * represented by 2 double values in sequence: the real and imaginary part,
      * i.e. the input array must be of size slices by rows by 2*columns. The
      * physical layout of the input data is as follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1][k2][2*k3] = Re[k1][k2][k3], a[k1][k2][2*k3+1] = Im[k1][k2][k3],
      * 0&lt;=k1&lt;slices, 0&lt;=k2&lt;rows, 0&lt;=k3&lt;columns,
      * </pre>
-     * <p>
+     * 
      * @param a data to transform
      */
     public void complexForward(final double[][][] a)
@@ -663,14 +659,13 @@ public class DoubleFFT_3D
      * double values in sequence: the real and imaginary part, i.e. the input
      * array must be of size slices*rows*2*columns. The physical layout of the
      * input data is as follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3],
      * a[k1*sliceStride + k2*rowStride + 2*k3+1] = Im[k1][k2][k3],
      * 0&lt;=k1&lt;slices, 0&lt;=k2&lt;rows, 0&lt;=k3&lt;columns,
      * </pre>
-     * <p>
+     * 
      * @param a     data to transform
      * @param scale if true then scaling is performed
      */
@@ -849,14 +844,13 @@ public class DoubleFFT_3D
      * double values in sequence: the real and imaginary part, i.e. the input
      * array must be of size slices*rows*2*columns. The physical layout of the
      * input data is as follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3],
      * a[k1*sliceStride + k2*rowStride + 2*k3+1] = Im[k1][k2][k3],
      * 0&lt;=k1&lt;slices, 0&lt;=k2&lt;rows, 0&lt;=k3&lt;columns,
      * </pre>
-     * <p>
+     * 
      * @param a     data to transform
      * @param scale if true then scaling is performed
      */
@@ -1031,13 +1025,12 @@ public class DoubleFFT_3D
      * represented by 2 double values in sequence: the real and imaginary part,
      * i.e. the input array must be of size slices by rows by 2*columns. The
      * physical layout of the input data is as follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1][k2][2*k3] = Re[k1][k2][k3], a[k1][k2][2*k3+1] = Im[k1][k2][k3],
      * 0&lt;=k1&lt;slices, 0&lt;=k2&lt;rows, 0&lt;=k3&lt;columns,
      * </pre>
-     * <p>
+     * 
      * @param a     data to transform
      * @param scale if true then scaling is performed
      */
@@ -1195,9 +1188,8 @@ public class DoubleFFT_3D
      * a[i*sliceStride + j*rowStride + k], where sliceStride = rows * 2 *
      * columns and rowStride = 2 * columns. The physical layout of the output
      * data is as follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3] =
      * Re[(slices-k1)%slices][(rows-k2)%rows][columns-k3], a[k1*sliceStride +
      * k2*rowStride + 2*k3+1] = Im[k1][k2][k3] =
@@ -1229,13 +1221,13 @@ public class DoubleFFT_3D
      * a[(slices/2)*sliceStride + (rows/2)*rowStride + 1] =
      * Re[slices/2][rows/2][columns/2]
      * </pre>
-     * <p>
-     * <p>
+     * 
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForward(double[] a)
@@ -1265,9 +1257,8 @@ public class DoubleFFT_3D
      * a[i*sliceStride + j*rowStride + k], where sliceStride = rows * 2 *
      * columns and rowStride = 2 * columns. The physical layout of the output
      * data is as follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3] =
      * Re[(slices-k1)%slices][(rows-k2)%rows][columns-k3], a[k1*sliceStride +
      * k2*rowStride + 2*k3+1] = Im[k1][k2][k3] =
@@ -1299,13 +1290,13 @@ public class DoubleFFT_3D
      * a[(slices/2)*sliceStride + (rows/2)*rowStride + 1] =
      * Re[slices/2][rows/2][columns/2]
      * </pre>
-     * <p>
-     * <p>
+     * 
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForward(DoubleLargeArray a)
@@ -1331,9 +1322,8 @@ public class DoubleFFT_3D
      * . This method only works when the sizes of all three dimensions are
      * power-of-two numbers. The data is stored in a 3D array. The physical
      * layout of the output data is as follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1][k2][2*k3] = Re[k1][k2][k3] =
      * Re[(slices-k1)%slices][(rows-k2)%rows][columns-k3], a[k1][k2][2*k3+1] =
      * Im[k1][k2][k3] = -Im[(slices-k1)%slices][(rows-k2)%rows][columns-k3],
@@ -1359,13 +1349,13 @@ public class DoubleFFT_3D
      * Re[slices/2][rows/2][0], a[slices/2][rows/2][1] =
      * Re[slices/2][rows/2][columns/2]
      * </pre>
-     * <p>
-     * <p>
+     * 
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForward(double[][][] a)
@@ -1395,7 +1385,7 @@ public class DoubleFFT_3D
      * slices*rows*columns elements filled with real data. To get back the
      * original data, use <code>complexInverse</code> on the output of this
      * method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForwardFull(double[] a)
@@ -1426,7 +1416,7 @@ public class DoubleFFT_3D
      * slices*rows*columns elements filled with real data. To get back the
      * original data, use <code>complexInverse</code> on the output of this
      * method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForwardFull(DoubleLargeArray a)
@@ -1457,7 +1447,7 @@ public class DoubleFFT_3D
      * slices by rows by columns elements filled with real data. To get back the
      * original data, use <code>complexInverse</code> on the output of this
      * method.
-     * <p>
+     * 
      * @param a data to transform
      */
     public void realForwardFull(double[][][] a)
@@ -1488,9 +1478,8 @@ public class DoubleFFT_3D
      * a[i*sliceStride + j*rowStride + k], where sliceStride = rows * 2 *
      * columns and rowStride = 2 * columns. The physical layout of the input
      * data has to be as follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3] =
      * Re[(slices-k1)%slices][(rows-k2)%rows][columns-k3], a[k1*sliceStride +
      * k2*rowStride + 2*k3+1] = Im[k1][k2][k3] =
@@ -1522,13 +1511,13 @@ public class DoubleFFT_3D
      * a[(slices/2)*sliceStride + (rows/2)*rowStride + 1] =
      * Re[slices/2][rows/2][columns/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * <p>
+     * 
      * @param a     data to transform
-     * <p>
+     * 
      * @param scale if true then scaling is performed
      */
     public void realInverse(double[] a, boolean scale)
@@ -1558,9 +1547,8 @@ public class DoubleFFT_3D
      * a[i*sliceStride + j*rowStride + k], where sliceStride = rows * 2 *
      * columns and rowStride = 2 * columns. The physical layout of the input
      * data has to be as follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3] =
      * Re[(slices-k1)%slices][(rows-k2)%rows][columns-k3], a[k1*sliceStride +
      * k2*rowStride + 2*k3+1] = Im[k1][k2][k3] =
@@ -1592,13 +1580,13 @@ public class DoubleFFT_3D
      * a[(slices/2)*sliceStride + (rows/2)*rowStride + 1] =
      * Re[slices/2][rows/2][columns/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * <p>
+     * 
      * @param a     data to transform
-     * <p>
+     * 
      * @param scale if true then scaling is performed
      */
     public void realInverse(DoubleLargeArray a, boolean scale)
@@ -1624,9 +1612,8 @@ public class DoubleFFT_3D
      * . This method only works when the sizes of all three dimensions are
      * power-of-two numbers. The data is stored in a 3D array. The physical
      * layout of the input data has to be as follows:
-     * <p>
-     * <
-     * pre>
+     * 
+     *      * <pre>
      * a[k1][k2][2*k3] = Re[k1][k2][k3] =
      * Re[(slices-k1)%slices][(rows-k2)%rows][columns-k3], a[k1][k2][2*k3+1] =
      * Im[k1][k2][k3] = -Im[(slices-k1)%slices][(rows-k2)%rows][columns-k3],
@@ -1652,13 +1639,13 @@ public class DoubleFFT_3D
      * Re[slices/2][rows/2][0], a[slices/2][rows/2][1] =
      * Re[slices/2][rows/2][columns/2]
      * </pre>
-     * <p>
+     * 
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * <p>
+     * 
      * @param a     data to transform
-     * <p>
+     * 
      * @param scale if true then scaling is performed
      */
     public void realInverse(double[][][] a, boolean scale)
@@ -1686,7 +1673,7 @@ public class DoubleFFT_3D
      * part equal 0. Because the result is stored in <code>a</code>, the input
      * array must be of size slices*rows*2*columns, with only the first
      * slices*rows*columns elements filled with real data.
-     * <p>
+     * 
      * @param a     data to transform
      * @param scale if true then scaling is performed
      */
@@ -1716,7 +1703,7 @@ public class DoubleFFT_3D
      * part equal 0. Because the result is stored in <code>a</code>, the input
      * array must be of size slices*rows*2*columns, with only the first
      * slices*rows*columns elements filled with real data.
-     * <p>
+     * 
      * @param a     data to transform
      * @param scale if true then scaling is performed
      */
@@ -1746,7 +1733,7 @@ public class DoubleFFT_3D
      * part equal 0. Because the result is stored in <code>a</code>, the input
      * array must be of size slices by rows by 2*columns, with only the first
      * slices by rows by columns elements filled with real data.
-     * <p>
+     * 
      * @param a     data to transform
      * @param scale if true then scaling is performed
      */

@@ -43,7 +43,6 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
  * Test of the utility class {@link RealFFTUtils_2D}.
  *
  * @author S&eacute;bastien Brisard
- *
  */
 @RunWith(value = Parameterized.class)
 public class RealFFTUtils_2DTest

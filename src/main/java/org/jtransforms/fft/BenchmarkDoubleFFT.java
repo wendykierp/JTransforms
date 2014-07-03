@@ -33,9 +33,8 @@ import pl.edu.icm.jlargearrays.DoubleLargeArray;
 
 /**
  * Benchmark of double precision FFT's
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
- * <p>
  */
 public class BenchmarkDoubleFFT
 {

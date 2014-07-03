@@ -39,26 +39,26 @@ import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
 
 /**
- * <p>
+ * 
  * This is a test of the class {@link DoubleFFT_2D}. In this test, a very crude
  * 2d FFT method is implemented (see {@link #complexForward(double[][])}),
  * assuming that {@link DoubleFFT_1D} has been fully tested and validated. This
  * crude (unoptimized) method is then used to establish <em>expected</em> values
  * of <em>direct</em> Fourier transforms.
  * </p>
- * <p>
+ * 
  * For <em>inverse</em> Fourier transforms, the test assumes that the
  * corresponding <em>direct</em> Fourier transform has been tested and
  * validated.
  * </p>
- * <p>
+ * 
  * In all cases, the test consists in creating a random array of data, and
  * verifying that expected and actual values of its Fourier transform coincide
  * (L2 norm is zero, within a specified accuracy).
  * </p>
  *
  * @author S&eacute;bastien Brisard
- *
+ * @author Piotr Wendykier
  */
 @RunWith(value = Parameterized.class)
 public class DoubleFFT_2DTest

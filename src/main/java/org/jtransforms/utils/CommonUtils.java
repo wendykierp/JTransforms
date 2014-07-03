@@ -33,7 +33,7 @@ import pl.edu.icm.jlargearrays.LongLargeArray;
 
 /**
  * Static methods used internally in FFT and DCT code.
- * <p>
+ * 
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
  */
 public class CommonUtils

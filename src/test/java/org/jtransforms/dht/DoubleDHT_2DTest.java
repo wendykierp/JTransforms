@@ -42,7 +42,6 @@ import pl.edu.icm.jlargearrays.DoubleLargeArray;
  * This is a series of JUnit tests for the {@link DoubleDHT_2D}.
  *
  * @author Piotr Wendykier
- *
  */
 @RunWith(value = Parameterized.class)
 public class DoubleDHT_2DTest
