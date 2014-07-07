@@ -33,7 +33,7 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
 
 /**
  * Benchmark of single precision DHT's
- * 
+ *
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
  */
 public class BenchmarkFloatDHT
@@ -113,7 +113,7 @@ public class BenchmarkFloatDHT
             System.out.println("Forward DHT 1D of size " + sizes1D[i]);
             if (doWarmup) { // call the transform twice to warm up
                 FloatDHT_1D dht = new FloatDHT_1D(sizes1D[i]);
-                x = new float[(int)sizes1D[i]];
+                x = new float[(int) sizes1D[i]];
                 IOUtils.fillMatrix_1D(sizes1D[i], x);
                 dht.forward(x);
                 IOUtils.fillMatrix_1D(sizes1D[i], x);
@@ -122,19 +122,21 @@ public class BenchmarkFloatDHT
             long elapsedTime = System.nanoTime();
             FloatDHT_1D dht = new FloatDHT_1D(sizes1D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
-            x = new float[(int)sizes1D[i]];
-            float av_time = 0;
+            x = new float[(int) sizes1D[i]];
+            double min_time = 0;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_1D(sizes1D[i], x);
                 elapsedTime = System.nanoTime();
                 dht.forward(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             dht = null;
             System.gc();
@@ -162,18 +164,20 @@ public class BenchmarkFloatDHT
             FloatDHT_2D dht2 = new FloatDHT_2D(sizes2D[i], sizes2D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
             x = new FloatLargeArray(sizes2D[i] * sizes2D[i], false);
-            float av_time = 0;
+            double min_time = 0;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_2D(sizes2D[i], sizes2D[i], x);
                 elapsedTime = System.nanoTime();
                 dht2.forward(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             dht2 = null;
             System.gc();
@@ -192,7 +196,7 @@ public class BenchmarkFloatDHT
             System.out.println("Forward DHT 2D (input 2D) of size " + sizes2D[i] + " x " + sizes2D[i]);
             if (doWarmup) { // call the transform twice to warm up
                 FloatDHT_2D dht2 = new FloatDHT_2D(sizes2D[i], sizes2D[i]);
-                x = new float[(int)sizes2D[i]][(int)sizes2D[i]];
+                x = new float[(int) sizes2D[i]][(int) sizes2D[i]];
                 IOUtils.fillMatrix_2D(sizes2D[i], sizes2D[i], x);
                 dht2.forward(x);
                 IOUtils.fillMatrix_2D(sizes2D[i], sizes2D[i], x);
@@ -201,19 +205,21 @@ public class BenchmarkFloatDHT
             long elapsedTime = System.nanoTime();
             FloatDHT_2D dht2 = new FloatDHT_2D(sizes2D[i], sizes2D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
-            x = new float[(int)sizes2D[i]][(int)sizes2D[i]];
-            float av_time = 0;
+            x = new float[(int) sizes2D[i]][(int) sizes2D[i]];
+            double min_time = 0;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_2D(sizes2D[i], sizes2D[i], x);
                 elapsedTime = System.nanoTime();
                 dht2.forward(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             dht2 = null;
             System.gc();
@@ -242,18 +248,20 @@ public class BenchmarkFloatDHT
             FloatDHT_3D dht3 = new FloatDHT_3D(sizes3D[i], sizes3D[i], sizes3D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
             x = new FloatLargeArray(sizes3D[i] * sizes3D[i] * sizes3D[i], false);
-            float av_time = 0;
+            double min_time = 0;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_3D(sizes3D[i], sizes3D[i], sizes3D[i], x);
                 elapsedTime = System.nanoTime();
                 dht3.forward(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             dht3 = null;
             System.gc();
@@ -272,7 +280,7 @@ public class BenchmarkFloatDHT
             System.out.println("Forward DHT 3D (input 3D) of size " + sizes3D[i] + " x " + sizes3D[i] + " x " + sizes3D[i]);
             if (doWarmup) { // call the transform twice to warm up
                 FloatDHT_3D dht3 = new FloatDHT_3D(sizes3D[i], sizes3D[i], sizes3D[i]);
-                x = new float[(int)sizes3D[i]][(int)sizes3D[i]][(int)sizes3D[i]];
+                x = new float[(int) sizes3D[i]][(int) sizes3D[i]][(int) sizes3D[i]];
                 IOUtils.fillMatrix_3D(sizes3D[i], sizes3D[i], sizes3D[i], x);
                 dht3.forward(x);
                 IOUtils.fillMatrix_3D(sizes3D[i], sizes3D[i], sizes3D[i], x);
@@ -281,19 +289,21 @@ public class BenchmarkFloatDHT
             long elapsedTime = System.nanoTime();
             FloatDHT_3D dht3 = new FloatDHT_3D(sizes3D[i], sizes3D[i], sizes3D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
-            x = new float[(int)sizes3D[i]][(int)sizes3D[i]][(int)sizes3D[i]];
-            float av_time = 0;
+            x = new float[(int) sizes3D[i]][(int) sizes3D[i]][(int) sizes3D[i]];
+            double min_time = 0;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_3D(sizes3D[i], sizes3D[i], sizes3D[i], x);
                 elapsedTime = System.nanoTime();
                 dht3.forward(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             dht3 = null;
             System.gc();

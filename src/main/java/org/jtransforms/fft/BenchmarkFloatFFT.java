@@ -33,7 +33,7 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
 
 /**
  * Benchmark of single precision FFT's
- * 
+ *
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
  */
 public class BenchmarkFloatFFT
@@ -41,7 +41,7 @@ public class BenchmarkFloatFFT
 
     private static int nthread = 16;
 
-    private static int niter = 200;
+    private static int niter = 100;
 
     private static int nsize = 8;
 
@@ -123,18 +123,20 @@ public class BenchmarkFloatFFT
             FloatFFT_1D fft = new FloatFFT_1D(sizes1D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
             x = new float[(int) (2 * sizes1D[i])];
-            double av_time = 0;
+            double min_time = Double.MAX_VALUE;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_1D(2 * sizes1D[i], x);
                 elapsedTime = System.nanoTime();
                 fft.complexForward(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             fft = null;
             System.gc();
@@ -163,18 +165,20 @@ public class BenchmarkFloatFFT
             FloatFFT_1D fft = new FloatFFT_1D(sizes1D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
             x = new float[(int) (2 * sizes1D[i])];
-            double av_time = 0;
+            double min_time = Double.MAX_VALUE;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_1D(sizes1D[i], x);
                 elapsedTime = System.nanoTime();
                 fft.realForwardFull(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             fft = null;
             System.gc();
@@ -203,22 +207,24 @@ public class BenchmarkFloatFFT
             FloatFFT_2D fft2 = new FloatFFT_2D(sizes2D[i], sizes2D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
             x = new FloatLargeArray(sizes2D[i] * 2 * sizes2D[i], false);
-            double av_time = 0;
+            double min_time = Double.MAX_VALUE;
             int niter_local = niter;
-            if(sizes2D[i] >= (1<<13)) {
-                niter_local = Math.max(1, niter/10);
+            if (sizes2D[i] >= (1 << 13)) {
+                niter_local = Math.max(1, niter / 10);
             }
             for (int j = 0; j < niter_local; j++) {
                 IOUtils.fillMatrix_2D(sizes2D[i], 2 * sizes2D[i], x);
                 elapsedTime = System.nanoTime();
                 fft2.complexForward(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter_local;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             fft2 = null;
             System.gc();
@@ -246,18 +252,20 @@ public class BenchmarkFloatFFT
             FloatFFT_2D fft2 = new FloatFFT_2D(sizes2D[i], sizes2D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
             x = new float[(int) sizes2D[i]][2 * (int) sizes2D[i]];
-            double av_time = 0;
+            double min_time = Double.MAX_VALUE;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_2D(sizes2D[i], 2 * sizes2D[i], x);
                 elapsedTime = System.nanoTime();
                 fft2.complexForward(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             fft2 = null;
             System.gc();
@@ -285,18 +293,20 @@ public class BenchmarkFloatFFT
             FloatFFT_2D fft2 = new FloatFFT_2D(sizes2D[i], sizes2D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
             x = new FloatLargeArray(sizes2D[i] * 2 * sizes2D[i], false);
-            double av_time = 0;
+            double min_time = Double.MAX_VALUE;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_2D(sizes2D[i], sizes2D[i], x);
                 elapsedTime = System.nanoTime();
                 fft2.realForwardFull(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             fft2 = null;
             System.gc();
@@ -324,18 +334,20 @@ public class BenchmarkFloatFFT
             FloatFFT_2D fft2 = new FloatFFT_2D(sizes2D[i], sizes2D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
             x = new float[(int) sizes2D[i]][2 * (int) sizes2D[i]];
-            double av_time = 0;
+            double min_time = Double.MAX_VALUE;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_2D(sizes2D[i], sizes2D[i], x);
                 elapsedTime = System.nanoTime();
                 fft2.realForwardFull(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             fft2 = null;
             System.gc();
@@ -363,22 +375,24 @@ public class BenchmarkFloatFFT
             FloatFFT_3D fft3 = new FloatFFT_3D(sizes3D[i], sizes3D[i], sizes3D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
             x = new FloatLargeArray(sizes3D[i] * sizes3D[i] * 2 * sizes3D[i], false);
-            double av_time = 0;
+            double min_time = Double.MAX_VALUE;
             int niter_local = niter;
-            if(sizes3D[i] >= (1<<10)) {
-                niter_local = Math.max(1, niter/10);
+            if (sizes3D[i] >= (1 << 10)) {
+                niter_local = Math.max(1, niter / 10);
             }
             for (int j = 0; j < niter_local; j++) {
                 IOUtils.fillMatrix_3D(sizes3D[i], sizes3D[i], 2 * sizes3D[i], x);
                 elapsedTime = System.nanoTime();
                 fft3.complexForward(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter_local;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             fft3 = null;
             System.gc();
@@ -406,18 +420,20 @@ public class BenchmarkFloatFFT
             FloatFFT_3D fft3 = new FloatFFT_3D(sizes3D[i], sizes3D[i], sizes3D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
             x = new float[(int) sizes3D[i]][(int) sizes3D[i]][2 * (int) sizes3D[i]];
-            double av_time = 0;
+            double min_time = Double.MAX_VALUE;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_3D(sizes3D[i], sizes3D[i], 2 * sizes3D[i], x);
                 elapsedTime = System.nanoTime();
                 fft3.complexForward(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             fft3 = null;
             System.gc();
@@ -445,18 +461,20 @@ public class BenchmarkFloatFFT
             FloatFFT_3D fft3 = new FloatFFT_3D(sizes3D[i], sizes3D[i], sizes3D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
             x = new FloatLargeArray(sizes3D[i] * sizes3D[i] * 2 * sizes3D[i], false);
-            double av_time = 0;
+            double min_time = Double.MAX_VALUE;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_3D(sizes3D[i], sizes3D[i], sizes3D[i], x);
                 elapsedTime = System.nanoTime();
                 fft3.realForwardFull(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             fft3 = null;
             System.gc();
@@ -484,18 +502,20 @@ public class BenchmarkFloatFFT
             FloatFFT_3D fft3 = new FloatFFT_3D(sizes3D[i], sizes3D[i], sizes3D[i]);
             times_with_constructor[i] = (System.nanoTime() - elapsedTime) / 1000000.0;
             x = new float[(int) sizes3D[i]][(int) sizes3D[i]][2 * (int) sizes3D[i]];
-            double av_time = 0;
+            double min_time = Double.MAX_VALUE;
             for (int j = 0; j < niter; j++) {
                 IOUtils.fillMatrix_3D(sizes3D[i], sizes3D[i], sizes3D[i], x);
                 elapsedTime = System.nanoTime();
                 fft3.realForwardFull(x);
                 elapsedTime = System.nanoTime() - elapsedTime;
-                av_time = av_time + elapsedTime;
+                if (elapsedTime < min_time) {
+                    min_time = elapsedTime;
+                }
             }
-            times_without_constructor[i] = (double) av_time / 1000000.0 / (double) niter;
+            times_without_constructor[i] = (double) min_time / 1000000.0;
             times_with_constructor[i] += times_without_constructor[i];
-            System.out.println("\tAverage execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
-            System.out.println("\tAverage execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
+            System.out.println("\tBest execution time without constructor: " + String.format("%.2f", times_without_constructor[i]) + " msec");
+            System.out.println("\tBest execution time with constructor: " + String.format("%.2f", times_with_constructor[i]) + " msec");
             x = null;
             fft3 = null;
             System.gc();
@@ -507,19 +527,18 @@ public class BenchmarkFloatFFT
     public static void main(String[] args)
     {
         parseArguments(args);
-//        benchmarkComplexForward_1D();
+        benchmarkComplexForward_1D();
+        benchmarkRealForward_1D();
 
-//        benchmarkRealForward_1D();
-//        benchmarkRealForward_1D_large();
-//       benchmarkComplexForward_2D_input_1D();
-//        benchmarkComplexForward_2D_input_2D();
-//        benchmarkRealForward_2D_input_1D();
-//        benchmarkRealForward_2D_input_2D();
+        benchmarkComplexForward_2D_input_1D();
+        benchmarkComplexForward_2D_input_2D();
+        benchmarkRealForward_2D_input_1D();
+        benchmarkRealForward_2D_input_2D();
 
         benchmarkComplexForward_3D_input_1D();
-//        benchmarkComplexForward_3D_input_3D();
-//        benchmarkRealForward_3D_input_1D();
-//        benchmarkRealForward_3D_input_3D();
+        benchmarkComplexForward_3D_input_3D();
+        benchmarkRealForward_3D_input_1D();
+        benchmarkRealForward_3D_input_3D();
         System.exit(0);
 
     }
