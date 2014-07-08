@@ -27,7 +27,7 @@ JTransforms is available on maven central as
 
 ## Benchmarks
 
-Benchmarks are available at [JTransforms website](http://sites.google.com/site/piotrwendykier/software/jtransforms)
+Benchmarks are available at [JTransforms website](http://sites.google.com/site/piotrwendykier/software/jtransforms).
 
 ##  JavaDoc
 The documentation is available at [apidocs](http://wendykierp.github.io/JTransforms/apidocs/).
