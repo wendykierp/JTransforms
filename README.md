@@ -11,6 +11,8 @@ from Java FFTPack written by Baoshe Zhang.
 
 [JTransforms-3.0.jar](http://search.maven.org/remotecontent?filepath=com/github/wendykierp/JTransforms/3.0/JTransforms-3.0.jar) 
 
+[JLargeArrays-1.2.jar (dependency)](http://search.maven.org/remotecontent?filepath=pl/edu/icm/JLargeArrays/1.2/JLargeArrays-1.2.jar) 
+
 [JTransforms-3.0-javadoc.jar](http://search.maven.org/remotecontent?filepath=com/github/wendykierp/JTransforms/3.0/JTransforms-3.0-javadoc.jar) 
 
 [JTransforms-3.0-sources.jar](http://search.maven.org/remotecontent?filepath=com/github/wendykierp/JTransforms/3.0/JTransforms-3.0-sources.jar) 
