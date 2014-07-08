@@ -1,20 +1,20 @@
 JTransforms changelog
 
-3.0:    July ??, 2014
-        - Added support for arrays of size up to 2^63 (via JLargeArrays library).
-        - Fixed unreported bugs.
-        - Added unit tests for all transforms.
-        - Removed dependency of Cobertura.
-        - Changed build system from Ant to Maven.
-        - Moved source code repository from sf.net to github.com.
+3.0:    July 8, 2014
+    - Added support for 1D arrays of size up to 2^63 (via JLargeArrays library).
+    - Fixed unreported bugs.
+    - Added unit tests for all transforms.
+    - Removed dependency on Cobertura.
+    - Changed build system from Ant to Maven.
+    - Moved source code repository from sf.net to github.com.
 
 2.4:    July 30, 2011
-        - Added support for unit tests (JUnit).
-        - Added support for code coverage analysis (Cobertura).
-        - Updated Ant file accordingly (generation of HTML reports).
-        - Added class RealFFTUtils_2D to make access to the data resulting from a real FFT transform more easily accessible.
-        - Added class RealFFTUtils_3D to make access to the data resulting from a real FFT transform more easily accessible.
-        - Fixed bugs in DoubleFFT_3D and FloatFFT_3D.
+    - Added support for unit tests (JUnit).
+    - Added support for code coverage analysis (Cobertura).
+    - Updated Ant file accordingly (generation of HTML reports).
+    - Added class RealFFTUtils_2D to make access to the data resulting from a real FFT transform more easily accessible.
+    - Added class RealFFTUtils_3D to make access to the data resulting from a real FFT transform more easily accessible.
+    - Fixed bugs in DoubleFFT_3D and FloatFFT_3D.
 
 2.3:	February 27, 2009
 	- Performance improvements for 3D FFT (realForwardFull() and realInverseFull() for not power-of-two sizes).
