@@ -25,23 +25,26 @@
  *
  * ***** END LICENSE BLOCK ***** */
 package org.jtransforms.utils;
+
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Concurrency utilities.
  *
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
  */
-public class ConcurrencyUtils {
+public class ConcurrencyUtils
+{
 
     /**
      * Thread pool.
      */
-    private static final ExecutorService THREAD_POOL = Executors.newCachedThreadPool(new CustomThreadFactory(new CustomExceptionHandler()));
+    private static ExecutorService THREAD_POOL = Executors.newCachedThreadPool(new CustomThreadFactory(new CustomExceptionHandler()));
 
     private static long THREADS_BEGIN_N_1D_FFT_2THREADS = 8192;
 
@@ -55,29 +58,35 @@ public class ConcurrencyUtils {
 
     private static int NTHREADS = prevPow2(getNumberOfProcessors());
 
-    private ConcurrencyUtils() {
+    private ConcurrencyUtils()
+    {
 
     }
 
-    private static class CustomExceptionHandler implements Thread.UncaughtExceptionHandler {
+    private static class CustomExceptionHandler implements Thread.UncaughtExceptionHandler
+    {
 
-        public void uncaughtException(Thread t, Throwable e) {
+        public void uncaughtException(Thread t, Throwable e)
+        {
             e.printStackTrace();
         }
 
     }
 
-    private static class CustomThreadFactory implements ThreadFactory {
+    private static class CustomThreadFactory implements ThreadFactory
+    {
 
         private static final ThreadFactory defaultFactory = Executors.defaultThreadFactory();
 
         private final Thread.UncaughtExceptionHandler handler;
 
-        CustomThreadFactory(Thread.UncaughtExceptionHandler handler) {
+        CustomThreadFactory(Thread.UncaughtExceptionHandler handler)
+        {
             this.handler = handler;
         }
 
-        public Thread newThread(Runnable r) {
+        public Thread newThread(Runnable r)
+        {
             Thread t = defaultFactory.newThread(r);
             t.setUncaughtExceptionHandler(handler);
             return t;
@@ -89,7 +98,8 @@ public class ConcurrencyUtils {
      *
      * @return number of available processors
      */
-    public static int getNumberOfProcessors() {
+    public static int getNumberOfProcessors()
+    {
         return Runtime.getRuntime().availableProcessors();
     }
 
@@ -98,7 +108,8 @@ public class ConcurrencyUtils {
      *
      * @return the current number of threads.
      */
-    public static int getNumberOfThreads() {
+    public static int getNumberOfThreads()
+    {
         return NTHREADS;
     }
 
@@ -108,7 +119,8 @@ public class ConcurrencyUtils {
      *
      * @param n number of threads
      */
-    public static void setNumberOfThreads(int n) {
+    public static void setNumberOfThreads(int n)
+    {
         NTHREADS = prevPow2(n);
     }
 
@@ -117,7 +129,8 @@ public class ConcurrencyUtils {
      *
      * @return the minimal size of 1D data for which two threads are used
      */
-    public static long getThreadsBeginN_1D_FFT_2Threads() {
+    public static long getThreadsBeginN_1D_FFT_2Threads()
+    {
         return THREADS_BEGIN_N_1D_FFT_2THREADS;
     }
 
@@ -126,7 +139,8 @@ public class ConcurrencyUtils {
      *
      * @return the minimal size of 1D data for which four threads are used
      */
-    public static long getThreadsBeginN_1D_FFT_4Threads() {
+    public static long getThreadsBeginN_1D_FFT_4Threads()
+    {
         return THREADS_BEGIN_N_1D_FFT_4THREADS;
     }
 
@@ -135,7 +149,8 @@ public class ConcurrencyUtils {
      *
      * @return the minimal size of 2D data for which threads are used
      */
-    public static long getThreadsBeginN_2D() {
+    public static long getThreadsBeginN_2D()
+    {
         return THREADS_BEGIN_N_2D;
     }
 
@@ -144,7 +159,8 @@ public class ConcurrencyUtils {
      *
      * @return the minimal size of 3D data for which threads are used
      */
-    public static long getThreadsBeginN_3D() {
+    public static long getThreadsBeginN_3D()
+    {
         return THREADS_BEGIN_N_3D;
     }
 
@@ -153,7 +169,8 @@ public class ConcurrencyUtils {
      *
      * @return the minimal size for which JLargeArrays are used
      */
-    public static long getLargeArraysBeginN() {
+    public static long getLargeArraysBeginN()
+    {
         return LARGE_ARAYS_BEGIN_N;
     }
 
@@ -162,7 +179,8 @@ public class ConcurrencyUtils {
      *
      * @param n the minimal size of 1D data for which two threads are used
      */
-    public static void setThreadsBeginN_1D_FFT_2Threads(long n) {
+    public static void setThreadsBeginN_1D_FFT_2Threads(long n)
+    {
         if (n < 1024) {
             THREADS_BEGIN_N_1D_FFT_2THREADS = 1024;
         } else {
@@ -175,7 +193,8 @@ public class ConcurrencyUtils {
      *
      * @param n the minimal size of 1D data for which four threads are used
      */
-    public static void setThreadsBeginN_1D_FFT_4Threads(long n) {
+    public static void setThreadsBeginN_1D_FFT_4Threads(long n)
+    {
         if (n < 1024) {
             THREADS_BEGIN_N_1D_FFT_4THREADS = 1024;
         } else {
@@ -188,7 +207,8 @@ public class ConcurrencyUtils {
      *
      * @param n the minimal size of 2D data for which threads are used
      */
-    public static void setThreadsBeginN_2D(long n) {
+    public static void setThreadsBeginN_2D(long n)
+    {
         if (n < 4096) {
             THREADS_BEGIN_N_2D = 4096;
         } else {
@@ -201,7 +221,8 @@ public class ConcurrencyUtils {
      *
      * @param n the minimal size of 3D data for which threads are used
      */
-    public static void setThreadsBeginN_3D(long n) {
+    public static void setThreadsBeginN_3D(long n)
+    {
         THREADS_BEGIN_N_3D = n;
     }
 
@@ -209,7 +230,8 @@ public class ConcurrencyUtils {
      * Resets the minimal size of 1D data for which two and four threads are
      * used.
      */
-    public static void resetThreadsBeginN_FFT() {
+    public static void resetThreadsBeginN_FFT()
+    {
         THREADS_BEGIN_N_1D_FFT_2THREADS = 8192;
         THREADS_BEGIN_N_1D_FFT_4THREADS = 65536;
     }
@@ -217,7 +239,8 @@ public class ConcurrencyUtils {
     /**
      * Resets the minimal size of 2D and 3D data for which threads are used.
      */
-    public static void resetThreadsBeginN() {
+    public static void resetThreadsBeginN()
+    {
         THREADS_BEGIN_N_2D = 65536;
         THREADS_BEGIN_N_3D = 65536;
     }
@@ -227,7 +250,8 @@ public class ConcurrencyUtils {
      *
      * @param n the maximal size for which JLargeArrays are used
      */
-    public static void setLargeArraysBeginN(long n) {
+    public static void setLargeArraysBeginN(long n)
+    {
         if (n < 1) {
             LARGE_ARAYS_BEGIN_N = 1;
         } else if (n > (1 << 28)) {
@@ -241,9 +265,11 @@ public class ConcurrencyUtils {
      * Returns the closest power-of-two number greater than or equal to x.
      *
      * @param x input value
+     *
      * @return the closest power-of-two number greater than or equal to x
      */
-    public static int nextPow2(int x) {
+    public static int nextPow2(int x)
+    {
         if (x < 1) {
             throw new IllegalArgumentException("x must be greater or equal 1");
         }
@@ -262,9 +288,11 @@ public class ConcurrencyUtils {
      * Returns the closest power-of-two number greater than or equal to x.
      *
      * @param x input value
+     *
      * @return the closest power-of-two number greater than or equal to x
      */
-    public static long nextPow2(long x) {
+    public static long nextPow2(long x)
+    {
         if (x < 1) {
             throw new IllegalArgumentException("x must be greater or equal 1");
         }
@@ -284,9 +312,11 @@ public class ConcurrencyUtils {
      * Returns the closest power-of-two number less than or equal to x.
      *
      * @param x input value
+     *
      * @return the closest power-of-two number less then or equal to x
      */
-    public static int prevPow2(int x) {
+    public static int prevPow2(int x)
+    {
         if (x < 1) {
             throw new IllegalArgumentException("x must be greater or equal 1");
         }
@@ -296,10 +326,12 @@ public class ConcurrencyUtils {
     /**
      * Returns the closest power-of-two number less than or equal to x.
      *
-     * @param x input value 
+     * @param x input value
+     *
      * @return the closest power-of-two number less then or equal to x
      */
-    public static long prevPow2(long x) {
+    public static long prevPow2(long x)
+    {
         if (x < 1) {
             throw new IllegalArgumentException("x must be greater or equal 1");
         }
@@ -310,9 +342,11 @@ public class ConcurrencyUtils {
      * Checks if x is a power-of-two number.
      *
      * @param x input value
+     *
      * @return true if x is a power-of-two number
      */
-    public static boolean isPowerOf2(int x) {
+    public static boolean isPowerOf2(int x)
+    {
         if (x <= 0) {
             return false;
         } else {
@@ -324,9 +358,11 @@ public class ConcurrencyUtils {
      * Checks if x is a power-of-two number.
      *
      * @param x input value
+     *
      * @return true if x is a power-of-two number
      */
-    public static boolean isPowerOf2(long x) {
+    public static boolean isPowerOf2(long x)
+    {
         if (x <= 0) {
             return false;
         } else {
@@ -340,7 +376,8 @@ public class ConcurrencyUtils {
      *
      * @param millis the length of time to sleep in milliseconds
      */
-    public static void sleep(long millis) {
+    public static void sleep(long millis)
+    {
         try {
             Thread.sleep(5000);
         } catch (InterruptedException e) {
@@ -353,18 +390,46 @@ public class ConcurrencyUtils {
      * that task.
      *
      * @param task a Runnable task for execution
+     *
      * @return a Future representing the task
      */
-    public static Future<?> submit(Runnable task) {
+    public static Future<?> submit(Runnable task)
+    {
+        if (THREAD_POOL.isShutdown() || THREAD_POOL.isTerminated()) {
+            THREAD_POOL = Executors.newCachedThreadPool(new CustomThreadFactory(new CustomExceptionHandler()));
+        }
         return THREAD_POOL.submit(task);
+    }
+
+    /**
+     * Shutdowns all submitted tasks.
+     */
+    public static void shutdownAndAwaitTermination()
+    {
+        THREAD_POOL.shutdown(); // Disable new tasks from being submitted
+        try {
+            // Wait a while for existing tasks to terminate
+            if (!THREAD_POOL.awaitTermination(60, TimeUnit.SECONDS)) {
+                THREAD_POOL.shutdownNow(); // Cancel currently executing tasks
+                // Wait a while for tasks to respond to being cancelled
+                if (!THREAD_POOL.awaitTermination(60, TimeUnit.SECONDS))
+                    System.err.println("Pool did not terminate");
+            }
+        } catch (InterruptedException ie) {
+            // (Re-)Cancel if current thread also interrupted
+            THREAD_POOL.shutdownNow();
+            // Preserve interrupt status
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**
      * Waits for all threads to complete computation.
      *
-     * @param futures array of Future objects 
+     * @param futures array of Future objects
      */
-    public static void waitForCompletion(Future<?>[] futures) {
+    public static void waitForCompletion(Future<?>[] futures)
+    {
         int size = futures.length;
         try {
             for (int j = 0; j < size; j++) {
