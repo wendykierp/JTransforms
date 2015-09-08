@@ -29,7 +29,8 @@ package org.jtransforms.fft;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,21 +38,23 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
- * 
+ *
  * This is a test of the class {@link DoubleFFT_2D}. In this test, a very crude
  * 2d FFT method is implemented (see {@link #complexForward(double[][])}),
  * assuming that {@link DoubleFFT_1D} has been fully tested and validated. This
  * crude (unoptimized) method is then used to establish <em>expected</em> values
  * of <em>direct</em> Fourier transforms.
  * </p>
- * 
+ *  
  * For <em>inverse</em> Fourier transforms, the test assumes that the
  * corresponding <em>direct</em> Fourier transform has been tested and
  * validated.
  * </p>
- * 
+ *  
  * In all cases, the test consists in creating a random array of data, and
  * verifying that expected and actual values of its Fourier transform coincide
  * (L2 norm is zero, within a specified accuracy).
@@ -74,7 +77,7 @@ public class DoubleFFT_2DTest
      */
     public static final int SEED = 20110602;
 
-    private static final double EPS = Math.pow(10, -12);
+    private static final double EPS = pow(10, -12);
 
     @Parameters
     public static Collection<Object[]> getParameters()
@@ -145,12 +148,13 @@ public class DoubleFFT_2DTest
     {
         this.numRows = numRows;
         this.numCols = numColumns;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.rfft = new DoubleFFT_1D(numColumns);
         this.cfft = new DoubleFFT_1D(numRows);
         this.fft = new DoubleFFT_2D(numRows, numColumns);
         this.random = new Random(seed);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
-        ConcurrencyUtils.setThreadsBeginN_2D(4);
+        CommonUtils.setThreadsBeginN_2D(4);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
 
@@ -212,9 +216,9 @@ public class DoubleFFT_2DTest
     @Test
     public void testComplexForwardLarge()
     {
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols);
         final double[][] expected0 = new double[numRows][2 * numCols];
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * numRows * numCols, false);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * numRows * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < 2 * numCols; c++) {
                 final double rnd = random.nextDouble();
@@ -281,8 +285,8 @@ public class DoubleFFT_2DTest
     @Test
     public void testComplexInverseScaledLarge()
     {
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * numRows * numCols, false);
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols, false);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * numRows * numCols);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols);
         for (int i = 0; i < actual.length(); i++) {
             final double rnd = random.nextDouble();
             actual.setDouble(i, rnd);
@@ -347,8 +351,8 @@ public class DoubleFFT_2DTest
     @Test
     public void testComplexInverseUnScaledLarge()
     {
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * numRows * numCols, false);
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols, false);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * numRows * numCols);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols);
         for (int i = 0; i < actual.length(); i++) {
             final double rnd = random.nextDouble();
             actual.setDouble(i, rnd);
@@ -449,10 +453,10 @@ public class DoubleFFT_2DTest
     @Test
     public void testRealForward1dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
         final double[] actual = new double[2 * numRows * numCols];
@@ -529,14 +533,14 @@ public class DoubleFFT_2DTest
     @Test
     public void testRealForwardLarge()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(numRows * 2 * numCols, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols);
+        final DoubleLargeArray expected = new DoubleLargeArray(numRows * 2 * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
                 final double rnd = random.nextDouble();
@@ -590,10 +594,10 @@ public class DoubleFFT_2DTest
     @Test
     public void testRealForward2dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
         final double[][] actual = new double[numRows][2 * numCols];
@@ -641,16 +645,15 @@ public class DoubleFFT_2DTest
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
 
-
-     /**
+    /**
      * A test of {@link DoubleFFT_2D#realForwardFull(DoubleLargeArray)}.
      */
     @Test
     public void testRealForwardFullLarge()
     {
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols);
         final double[][] expected0 = new double[numRows][2 * numCols];
-        final DoubleLargeArray expected = new DoubleLargeArray(numRows * 2 * numCols, false);
+        final DoubleLargeArray expected = new DoubleLargeArray(numRows * 2 * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
                 final double rnd = random.nextDouble();
@@ -669,7 +672,6 @@ public class DoubleFFT_2DTest
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
 
-    
     /**
      * A test of {@link DoubleFFT_2D#realForwardFull(double[][])}.
      */
@@ -721,8 +723,8 @@ public class DoubleFFT_2DTest
     @Test
     public void testRealInverseFullScaledLarge()
     {
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * numRows * numCols, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * numRows * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
                 final double rnd = random.nextDouble();
@@ -736,7 +738,7 @@ public class DoubleFFT_2DTest
         double rmse = IOUtils.computeRMSE(actual, expected);
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
-    
+
     /**
      * A test of {@link DoubleFFT_2D#realInverseFull(double[][], boolean)}, with
      * the second parameter set to <code>true</code>.
@@ -789,8 +791,8 @@ public class DoubleFFT_2DTest
     @Test
     public void testRealInverseFullUnscaledLarge()
     {
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * numRows * numCols, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * numRows * numCols);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * numRows * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
                 final double rnd = random.nextDouble();
@@ -804,8 +806,7 @@ public class DoubleFFT_2DTest
         double rmse = IOUtils.computeRMSE(actual, expected);
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
-    
-    
+
     /**
      * A test of {@link DoubleFFT_2D#realInverseFull(double[][], boolean)}, with
      * the second parameter set to <code>false</code>.
@@ -835,10 +836,10 @@ public class DoubleFFT_2DTest
     @Test
     public void testRealInverseScaled1dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
         final double[] actual = new double[numRows * numCols];
@@ -854,22 +855,21 @@ public class DoubleFFT_2DTest
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
 
-    
-     /**
+    /**
      * A test of {@link DoubleFFT_2D#realInverse(DoubleLargeArray, boolean)}, with the
      * second parameter set to <code>true</code>.
      */
     @Test
     public void testRealInverseScaledLarge()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        final DoubleLargeArray actual = new DoubleLargeArray(numRows * numCols, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(actual.length(), false);
+        final DoubleLargeArray actual = new DoubleLargeArray(numRows * numCols);
+        final DoubleLargeArray expected = new DoubleLargeArray(actual.length());
         for (int i = 0; i < actual.length(); i++) {
             final double rnd = random.nextDouble();
             actual.setDouble(i, rnd);
@@ -880,7 +880,7 @@ public class DoubleFFT_2DTest
         double rmse = IOUtils.computeRMSE(actual, expected);
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
-    
+
     /**
      * A test of {@link DoubleFFT_2D#realInverse(double[][], boolean)}, with the
      * second parameter set to <code>true</code>.
@@ -888,10 +888,10 @@ public class DoubleFFT_2DTest
     @Test
     public void testRealInverseScaled2dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
         final double[][] actual = new double[numRows][numCols];

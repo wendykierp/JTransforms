@@ -25,10 +25,12 @@
  *
  * ***** END LICENSE BLOCK ***** */
 package org.jtransforms.dst;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,6 +38,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * This is a series of JUnit tests for the {@link FloatDST_1D}.
@@ -56,7 +60,7 @@ public class FloatDST_1DTest
      */
     public static final int SEED = 20110602;
 
-    private static final double EPS = Math.pow(10, -5);
+    private static final double EPS = pow(10, -5);
 
     @Parameters
     public static Collection<Object[]> getParameters()
@@ -107,10 +111,11 @@ public class FloatDST_1DTest
     public FloatDST_1DTest(final int n, final int numThreads, final long seed)
     {
         this.n = n;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.dst = new FloatDST_1D(n);
         this.random = new Random(seed);
-        ConcurrencyUtils.setThreadsBeginN_1D_FFT_2Threads(512);
-        ConcurrencyUtils.setThreadsBeginN_1D_FFT_4Threads(512);
+        CommonUtils.setThreadsBeginN_1D_FFT_2Threads(512);
+        CommonUtils.setThreadsBeginN_1D_FFT_4Threads(512);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
@@ -134,18 +139,18 @@ public class FloatDST_1DTest
         double rmse = IOUtils.computeRMSE(actual, expected);
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
-    
-     /**
+
+    /**
      * This is a test of
      * {@link FloatDST_1D#forward(FloatLargeArray, boolean)}, and
      * {@link FloatDST_1D#inverse(FloatLargeArray, boolean)} with the second
      * parameter set to <code>true</code>.
      */
     @Test
-    public void testScaledLarge() {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final FloatLargeArray actual = new FloatLargeArray(n, false);
-        final FloatLargeArray expected = new FloatLargeArray(n, false);
+    public void testScaledLarge()
+    {
+        final FloatLargeArray actual = new FloatLargeArray(n);
+        final FloatLargeArray expected = new FloatLargeArray(n);
         for (int i = 0; i < n; i++) {
             actual.setFloat(i, 2.f * random.nextFloat() - 1.f);
             expected.setFloat(i, actual.getFloat(i));

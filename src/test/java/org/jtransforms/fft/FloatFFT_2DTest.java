@@ -29,7 +29,8 @@ package org.jtransforms.fft;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,21 +38,23 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
- * 
+ *
  * This is a test of the class {@link FloatFFT_2D}. In this test, a very crude
  * 2d FFT method is implemented (see {@link #complexForward(float[][])}),
  * assuming that {@link FloatFFT_1D} has been fully tested and validated. This
  * crude (unoptimized) method is then used to establish <em>expected</em> values
  * of <em>direct</em> Fourier transforms.
  * </p>
- * 
+ *  
  * For <em>inverse</em> Fourier transforms, the test assumes that the
  * corresponding <em>direct</em> Fourier transform has been tested and
  * validated.
  * </p>
- * 
+ *  
  * In all cases, the test consists in creating a random array of data, and
  * verifying that expected and actual values of its Fourier transform coincide
  * (L2 norm is zero, within a specified accuracy).
@@ -74,7 +77,9 @@ public class FloatFFT_2DTest
      */
     public static final int SEED = 20110602;
 
-    private static final double EPS = Math.pow(10, -3);
+    private static final double EPS = pow(10, -3);
+
+    private static final double EPS_UNSCALED = 0.5;
 
     @Parameters
     public static Collection<Object[]> getParameters()
@@ -141,16 +146,17 @@ public class FloatFFT_2DTest
      *                   the seed of the random generator
      */
     public FloatFFT_2DTest(final int numRows, final int numColumns,
-                            final int numThreads, final long seed)
+                           final int numThreads, final long seed)
     {
         this.numRows = numRows;
         this.numCols = numColumns;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.rfft = new FloatFFT_1D(numColumns);
         this.cfft = new FloatFFT_1D(numRows);
         this.fft = new FloatFFT_2D(numRows, numColumns);
         this.random = new Random(seed);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
-        ConcurrencyUtils.setThreadsBeginN_2D(4);
+        CommonUtils.setThreadsBeginN_2D(4);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
 
@@ -212,9 +218,9 @@ public class FloatFFT_2DTest
     @Test
     public void testComplexForwardLarge()
     {
-        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols, false);
+        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols);
         final float[][] expected0 = new float[numRows][2 * numCols];
-        final FloatLargeArray expected = new FloatLargeArray(2 * numRows * numCols, false);
+        final FloatLargeArray expected = new FloatLargeArray(2 * numRows * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < 2 * numCols; c++) {
                 final float rnd = random.nextFloat();
@@ -281,8 +287,9 @@ public class FloatFFT_2DTest
     @Test
     public void testComplexInverseScaledLarge()
     {
-        final FloatLargeArray expected = new FloatLargeArray(2 * numRows * numCols, false);
-        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols, false);
+
+        final FloatLargeArray expected = new FloatLargeArray(2 * numRows * numCols);
+        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols);
         for (int i = 0; i < actual.length(); i++) {
             final float rnd = random.nextFloat();
             actual.setDouble(i, rnd);
@@ -347,8 +354,8 @@ public class FloatFFT_2DTest
     @Test
     public void testComplexInverseUnScaledLarge()
     {
-        final FloatLargeArray expected = new FloatLargeArray(2 * numRows * numCols, false);
-        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols, false);
+        final FloatLargeArray expected = new FloatLargeArray(2 * numRows * numCols);
+        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols);
         for (int i = 0; i < actual.length(); i++) {
             final float rnd = random.nextFloat();
             actual.setDouble(i, rnd);
@@ -449,10 +456,10 @@ public class FloatFFT_2DTest
     @Test
     public void testRealForward1dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
         final float[] actual = new float[2 * numRows * numCols];
@@ -529,14 +536,14 @@ public class FloatFFT_2DTest
     @Test
     public void testRealForwardLarge()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols, false);
-        final FloatLargeArray expected = new FloatLargeArray(numRows * 2 * numCols, false);
+        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols);
+        final FloatLargeArray expected = new FloatLargeArray(numRows * 2 * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
                 final float rnd = random.nextFloat();
@@ -590,10 +597,10 @@ public class FloatFFT_2DTest
     @Test
     public void testRealForward2dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
         final float[][] actual = new float[numRows][2 * numCols];
@@ -640,16 +647,15 @@ public class FloatFFT_2DTest
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
 
-
-     /**
+    /**
      * A test of {@link FloatFFT_2D#realForwardFull(FloatLargeArray)}.
      */
     @Test
     public void testRealForwardFullLarge()
     {
-        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols, false);
+        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols);
         final float[][] expected0 = new float[numRows][2 * numCols];
-        final FloatLargeArray expected = new FloatLargeArray(numRows * 2 * numCols, false);
+        final FloatLargeArray expected = new FloatLargeArray(numRows * 2 * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
                 final float rnd = random.nextFloat();
@@ -668,7 +674,6 @@ public class FloatFFT_2DTest
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
 
-    
     /**
      * A test of {@link FloatFFT_2D#realForwardFull(float[][])}.
      */
@@ -722,8 +727,8 @@ public class FloatFFT_2DTest
     @Test
     public void testRealInverseFullScaledLarge()
     {
-        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols, false);
-        final FloatLargeArray expected = new FloatLargeArray(2 * numRows * numCols, false);
+        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols);
+        final FloatLargeArray expected = new FloatLargeArray(2 * numRows * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
                 final float rnd = random.nextFloat();
@@ -739,7 +744,7 @@ public class FloatFFT_2DTest
         double rmse = IOUtils.computeRMSE(actual, expected);
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
-    
+
     /**
      * A test of {@link FloatFFT_2D#realInverseFull(float[][], boolean)}, with
      * the second parameter set to <code>true</code>.
@@ -784,7 +789,7 @@ public class FloatFFT_2DTest
         fft.complexInverse(expected, false);
         fft.realInverseFull(actual, false);
         double rmse = IOUtils.computeRMSE(actual, expected);
-        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
+        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS_UNSCALED);
     }
 
     /**
@@ -794,8 +799,8 @@ public class FloatFFT_2DTest
     @Test
     public void testRealInverseFullUnscaledLarge()
     {
-        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols, false);
-        final FloatLargeArray expected = new FloatLargeArray(2 * numRows * numCols, false);
+        final FloatLargeArray actual = new FloatLargeArray(2 * numRows * numCols);
+        final FloatLargeArray expected = new FloatLargeArray(2 * numRows * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
                 final float rnd = random.nextFloat();
@@ -809,10 +814,9 @@ public class FloatFFT_2DTest
         fft.complexInverse(expected, false);
         fft.realInverseFull(actual, false);
         double rmse = IOUtils.computeRMSE(actual, expected);
-        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
+        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS_UNSCALED);
     }
-    
-    
+
     /**
      * A test of {@link FloatFFT_2D#realInverseFull(float[][], boolean)}, with
      * the second parameter set to <code>false</code>.
@@ -832,7 +836,7 @@ public class FloatFFT_2DTest
         fft.realInverseFull(actual, false);
         fft.complexInverse(expected, false);
         double rmse = IOUtils.computeRMSE(actual, expected);
-        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
+        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS_UNSCALED);
     }
 
     /**
@@ -842,10 +846,10 @@ public class FloatFFT_2DTest
     @Test
     public void testRealInverseScaled1dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
         final float[] actual = new float[numRows * numCols];
@@ -861,22 +865,21 @@ public class FloatFFT_2DTest
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
 
-    
-     /**
+    /**
      * A test of {@link FloatFFT_2D#realInverse(FloatLargeArray, boolean)}, with the
      * second parameter set to <code>true</code>.
      */
     @Test
     public void testRealInverseScaledLarge()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        final FloatLargeArray actual = new FloatLargeArray(numRows * numCols, false);
-        final FloatLargeArray expected = new FloatLargeArray(actual.length(), false);
+        final FloatLargeArray actual = new FloatLargeArray(numRows * numCols);
+        final FloatLargeArray expected = new FloatLargeArray(actual.length());
         for (int i = 0; i < actual.length(); i++) {
             final float rnd = random.nextFloat();
             actual.setDouble(i, rnd);
@@ -887,7 +890,7 @@ public class FloatFFT_2DTest
         double rmse = IOUtils.computeRMSE(actual, expected);
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
-    
+
     /**
      * A test of {@link FloatFFT_2D#realInverse(float[][], boolean)}, with the
      * second parameter set to <code>true</code>.
@@ -895,10 +898,10 @@ public class FloatFFT_2DTest
     @Test
     public void testRealInverseScaled2dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
         final float[][] actual = new float[numRows][numCols];

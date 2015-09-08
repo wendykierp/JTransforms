@@ -29,7 +29,8 @@ package org.jtransforms.dht;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,6 +38,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * This is a series of JUnit tests for the {@link FloatDHT_2D}.
@@ -57,7 +60,7 @@ public class FloatDHT_2DTest
      */
     public static final int SEED = 20110602;
 
-    private static final double EPS = Math.pow(10, -5);
+    private static final double EPS = pow(10, -5);
 
     @Parameters
     public static Collection<Object[]> getParameters()
@@ -113,14 +116,15 @@ public class FloatDHT_2DTest
      *                   the seed of the random generator
      */
     public FloatDHT_2DTest(final int numRows, final int numColumns,
-                            final int numThreads, final long seed)
+                           final int numThreads, final long seed)
     {
         this.numRows = numRows;
         this.numCols = numColumns;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.dht = new FloatDHT_2D(numRows, numCols);
         this.random = new Random(seed);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
-        ConcurrencyUtils.setThreadsBeginN_2D(4096);
+        CommonUtils.setThreadsBeginN_2D(4096);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
 
@@ -155,8 +159,8 @@ public class FloatDHT_2DTest
     @Test
     public void testScaledLarge()
     {
-        final FloatLargeArray actual = new FloatLargeArray(numRows * numCols, false);
-        final FloatLargeArray expected = new FloatLargeArray(numRows * numCols, false);
+        final FloatLargeArray actual = new FloatLargeArray(numRows * numCols);
+        final FloatLargeArray expected = new FloatLargeArray(numRows * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
                 final float rnd = random.nextFloat();
@@ -169,7 +173,7 @@ public class FloatDHT_2DTest
         double rmse = IOUtils.computeRMSE(actual, expected);
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
-    
+
     /**
      * This is a test of {@link FloatDHT_2D#forward(double[][], boolean)},
      * and {@link FloatDHT_2D#inverse(double[][], boolean)}

@@ -27,8 +27,13 @@
 package org.jtransforms.dst;
 
 import java.util.concurrent.Future;
-import org.jtransforms.utils.ConcurrencyUtils;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
 
 /**
  * Computes 3D Discrete Sine Transform (DST) of double precision data. The sizes
@@ -37,10 +42,11 @@ import pl.edu.icm.jlargearrays.DoubleLargeArray;
  * <br>
  * Part of code is derived from General Purpose FFT Package written by Takuya
  * Ooura (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html)
- * 
+ *  
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
  */
-public class DoubleDST_3D {
+public class DoubleDST_3D
+{
 
     private int slices;
 
@@ -70,12 +76,13 @@ public class DoubleDST_3D {
 
     /**
      * Creates new instance of DoubleDST_3D.
-     * 
-     * @param slices number of slices
-     * @param rows number of rows
+     *  
+     * @param slices  number of slices
+     * @param rows    number of rows
      * @param columns number of columns
      */
-    public DoubleDST_3D(long slices, long rows, long columns) {
+    public DoubleDST_3D(long slices, long rows, long columns)
+    {
         if (slices <= 1 || rows <= 1 || columns <= 1) {
             throw new IllegalArgumentException("slices, rows and columns must be greater than 1");
         }
@@ -89,16 +96,13 @@ public class DoubleDST_3D {
         this.rowStride = (int) columns;
         this.sliceStridel = rows * columns;
         this.rowStridel = columns;
-        if (slices * rows * columns >= ConcurrencyUtils.getThreadsBeginN_3D()) {
+        if (slices * rows * columns >= CommonUtils.getThreadsBeginN_3D()) {
             this.useThreads = true;
         }
-        if (ConcurrencyUtils.isPowerOf2(slices) && ConcurrencyUtils.isPowerOf2(rows) && ConcurrencyUtils.isPowerOf2(columns)) {
+        if (CommonUtils.isPowerOf2(slices) && CommonUtils.isPowerOf2(rows) && CommonUtils.isPowerOf2(columns)) {
             isPowerOfTwo = true;
         }
-        long largeArraysBenginN = ConcurrencyUtils.getLargeArraysBeginN();
-        if (slices * rows * columns > (1 << 28)) {
-            ConcurrencyUtils.setLargeArraysBeginN(Math.min(Math.min(rows, columns), slices));
-        }
+        CommonUtils.setUseLargeArrays(slices * rows * columns > LargeArray.getMaxSizeOf32bitArray());
         dstSlices = new DoubleDST_1D(slices);
         if (slices == rows) {
             dstRows = dstSlices;
@@ -112,7 +116,6 @@ public class DoubleDST_3D {
         } else {
             dstColumns = new DoubleDST_1D(columns);
         }
-        ConcurrencyUtils.setLargeArraysBeginN(largeArraysBenginN);
     }
 
     /**
@@ -122,11 +125,12 @@ public class DoubleDST_3D {
      * (i,j,k) of 3D array x[slices][rows][columns] is stored in a[i*sliceStride
      * + j*rowStride + k], where sliceStride = rows * columns and rowStride =
      * columns.
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void forward(final double[] a, final boolean scale) {
+    public void forward(final double[] a, final boolean scale)
+    {
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
         if (isPowerOfTwo) {
             if ((nthreads > 1) && useThreads) {
@@ -136,112 +140,134 @@ public class DoubleDST_3D {
                 ddxt3da_sub(-1, a, scale);
                 ddxt3db_sub(-1, a, scale);
             }
-        } else {
-            if ((nthreads > 1) && useThreads && (slices >= nthreads) && (rows >= nthreads) && (columns >= nthreads)) {
-                Future<?>[] futures = new Future[nthreads];
-                int p = slices / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstSlice = l * p;
-                    final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            for (int s = firstSlice; s < lastSlice; s++) {
-                                int idx1 = s * sliceStride;
+        } else if ((nthreads > 1) && useThreads && (slices >= nthreads) && (rows >= nthreads) && (columns >= nthreads)) {
+            Future<?>[] futures = new Future[nthreads];
+            int p = slices / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final int firstSlice = l * p;
+                final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        for (int s = firstSlice; s < lastSlice; s++) {
+                            int idx1 = s * sliceStride;
+                            for (int r = 0; r < rows; r++) {
+                                dstColumns.forward(a, idx1 + r * rowStride, scale);
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            for (int l = 0; l < nthreads; l++) {
+                final int firstSlice = l * p;
+                final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        double[] temp = new double[rows];
+                        for (int s = firstSlice; s < lastSlice; s++) {
+                            int idx1 = s * sliceStride;
+                            for (int c = 0; c < columns; c++) {
                                 for (int r = 0; r < rows; r++) {
-                                    dstColumns.forward(a, idx1 + r * rowStride, scale);
+                                    int idx3 = idx1 + r * rowStride + c;
+                                    temp[r] = a[idx3];
+                                }
+                                dstRows.forward(temp, scale);
+                                for (int r = 0; r < rows; r++) {
+                                    int idx3 = idx1 + r * rowStride + c;
+                                    a[idx3] = temp[r];
                                 }
                             }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstSlice = l * p;
-                    final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            double[] temp = new double[rows];
-                            for (int s = firstSlice; s < lastSlice; s++) {
-                                int idx1 = s * sliceStride;
-                                for (int c = 0; c < columns; c++) {
-                                    for (int r = 0; r < rows; r++) {
-                                        int idx3 = idx1 + r * rowStride + c;
-                                        temp[r] = a[idx3];
-                                    }
-                                    dstRows.forward(temp, scale);
-                                    for (int r = 0; r < rows; r++) {
-                                        int idx3 = idx1 + r * rowStride + c;
-                                        a[idx3] = temp[r];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                p = rows / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstRow = l * p;
-                    final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            double[] temp = new double[slices];
-                            for (int r = firstRow; r < lastRow; r++) {
-                                int idx1 = r * rowStride;
-                                for (int c = 0; c < columns; c++) {
-                                    for (int s = 0; s < slices; s++) {
-                                        int idx3 = s * sliceStride + idx1 + c;
-                                        temp[s] = a[idx3];
-                                    }
-                                    dstSlices.forward(temp, scale);
-                                    for (int s = 0; s < slices; s++) {
-                                        int idx3 = s * sliceStride + idx1 + c;
-                                        a[idx3] = temp[s];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-            } else {
-                for (int s = 0; s < slices; s++) {
-                    int idx1 = s * sliceStride;
-                    for (int r = 0; r < rows; r++) {
-                        dstColumns.forward(a, idx1 + r * rowStride, scale);
-                    }
-                }
-                double[] temp = new double[rows];
-                for (int s = 0; s < slices; s++) {
-                    int idx1 = s * sliceStride;
-                    for (int c = 0; c < columns; c++) {
-                        for (int r = 0; r < rows; r++) {
-                            int idx3 = idx1 + r * rowStride + c;
-                            temp[r] = a[idx3];
-                        }
-                        dstRows.forward(temp, scale);
-                        for (int r = 0; r < rows; r++) {
-                            int idx3 = idx1 + r * rowStride + c;
-                            a[idx3] = temp[r];
                         }
                     }
-                }
-                temp = new double[slices];
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            p = rows / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final int firstRow = l * p;
+                final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        double[] temp = new double[slices];
+                        for (int r = firstRow; r < lastRow; r++) {
+                            int idx1 = r * rowStride;
+                            for (int c = 0; c < columns; c++) {
+                                for (int s = 0; s < slices; s++) {
+                                    int idx3 = s * sliceStride + idx1 + c;
+                                    temp[s] = a[idx3];
+                                }
+                                dstSlices.forward(temp, scale);
+                                for (int s = 0; s < slices; s++) {
+                                    int idx3 = s * sliceStride + idx1 + c;
+                                    a[idx3] = temp[s];
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+        } else {
+            for (int s = 0; s < slices; s++) {
+                int idx1 = s * sliceStride;
                 for (int r = 0; r < rows; r++) {
-                    int idx1 = r * rowStride;
-                    for (int c = 0; c < columns; c++) {
-                        for (int s = 0; s < slices; s++) {
-                            int idx3 = s * sliceStride + idx1 + c;
-                            temp[s] = a[idx3];
-                        }
-                        dstSlices.forward(temp, scale);
-                        for (int s = 0; s < slices; s++) {
-                            int idx3 = s * sliceStride + idx1 + c;
-                            a[idx3] = temp[s];
-                        }
+                    dstColumns.forward(a, idx1 + r * rowStride, scale);
+                }
+            }
+            double[] temp = new double[rows];
+            for (int s = 0; s < slices; s++) {
+                int idx1 = s * sliceStride;
+                for (int c = 0; c < columns; c++) {
+                    for (int r = 0; r < rows; r++) {
+                        int idx3 = idx1 + r * rowStride + c;
+                        temp[r] = a[idx3];
+                    }
+                    dstRows.forward(temp, scale);
+                    for (int r = 0; r < rows; r++) {
+                        int idx3 = idx1 + r * rowStride + c;
+                        a[idx3] = temp[r];
+                    }
+                }
+            }
+            temp = new double[slices];
+            for (int r = 0; r < rows; r++) {
+                int idx1 = r * rowStride;
+                for (int c = 0; c < columns; c++) {
+                    for (int s = 0; s < slices; s++) {
+                        int idx3 = s * sliceStride + idx1 + c;
+                        temp[s] = a[idx3];
+                    }
+                    dstSlices.forward(temp, scale);
+                    for (int s = 0; s < slices; s++) {
+                        int idx3 = s * sliceStride + idx1 + c;
+                        a[idx3] = temp[s];
                     }
                 }
             }
@@ -255,11 +281,12 @@ public class DoubleDST_3D {
      * (i,j,k) of 3D array x[slices][rows][columns] is stored in a[i*sliceStride
      * + j*rowStride + k], where sliceStride = rows * columns and rowStride =
      * columns.
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void forward(final DoubleLargeArray a, final boolean scale) {
+    public void forward(final DoubleLargeArray a, final boolean scale)
+    {
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
         if (isPowerOfTwo) {
             if ((nthreads > 1) && useThreads) {
@@ -269,112 +296,134 @@ public class DoubleDST_3D {
                 ddxt3da_sub(-1, a, scale);
                 ddxt3db_sub(-1, a, scale);
             }
-        } else {
-            if ((nthreads > 1) && useThreads && (slicesl >= nthreads) && (rowsl >= nthreads) && (columnsl >= nthreads)) {
-                Future<?>[] futures = new Future[nthreads];
-                long p = slicesl / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final long firstSlice = l * p;
-                    final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            for (long s = firstSlice; s < lastSlice; s++) {
-                                long idx1 = s * sliceStridel;
+        } else if ((nthreads > 1) && useThreads && (slicesl >= nthreads) && (rowsl >= nthreads) && (columnsl >= nthreads)) {
+            Future<?>[] futures = new Future[nthreads];
+            long p = slicesl / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final long firstSlice = l * p;
+                final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        for (long s = firstSlice; s < lastSlice; s++) {
+                            long idx1 = s * sliceStridel;
+                            for (long r = 0; r < rowsl; r++) {
+                                dstColumns.forward(a, idx1 + r * rowStridel, scale);
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            for (int l = 0; l < nthreads; l++) {
+                final long firstSlice = l * p;
+                final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        DoubleLargeArray temp = new DoubleLargeArray(rowsl, false);
+                        for (long s = firstSlice; s < lastSlice; s++) {
+                            long idx1 = s * sliceStridel;
+                            for (long c = 0; c < columnsl; c++) {
                                 for (long r = 0; r < rowsl; r++) {
-                                    dstColumns.forward(a, idx1 + r * rowStridel, scale);
+                                    long idx3 = idx1 + r * rowStridel + c;
+                                    temp.setDouble(r, a.getDouble(idx3));
+                                }
+                                dstRows.forward(temp, scale);
+                                for (long r = 0; r < rowsl; r++) {
+                                    long idx3 = idx1 + r * rowStridel + c;
+                                    a.setDouble(idx3, temp.getDouble(r));
                                 }
                             }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                for (int l = 0; l < nthreads; l++) {
-                    final long firstSlice = l * p;
-                    final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            DoubleLargeArray temp = new DoubleLargeArray(rowsl, false);
-                            for (long s = firstSlice; s < lastSlice; s++) {
-                                long idx1 = s * sliceStridel;
-                                for (long c = 0; c < columnsl; c++) {
-                                    for (long r = 0; r < rowsl; r++) {
-                                        long idx3 = idx1 + r * rowStridel + c;
-                                        temp.setDouble(r, a.getDouble(idx3));
-                                    }
-                                    dstRows.forward(temp, scale);
-                                    for (long r = 0; r < rowsl; r++) {
-                                        long idx3 = idx1 + r * rowStridel + c;
-                                        a.setDouble(idx3, temp.getDouble(r));
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                p = rowsl / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final long firstRow = l * p;
-                    final long lastRow = (l == (nthreads - 1)) ? rowsl : firstRow + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            DoubleLargeArray temp = new DoubleLargeArray(slicesl, false);
-                            for (long r = firstRow; r < lastRow; r++) {
-                                long idx1 = r * rowStridel;
-                                for (long c = 0; c < columnsl; c++) {
-                                    for (long s = 0; s < slicesl; s++) {
-                                        long idx3 = s * sliceStridel + idx1 + c;
-                                        temp.setDouble(s, a.getDouble(idx3));
-                                    }
-                                    dstSlices.forward(temp, scale);
-                                    for (long s = 0; s < slicesl; s++) {
-                                        long idx3 = s * sliceStridel + idx1 + c;
-                                        a.setDouble(idx3, temp.getDouble(s));
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-            } else {
-                for (long s = 0; s < slicesl; s++) {
-                    long idx1 = s * sliceStridel;
-                    for (long r = 0; r < rowsl; r++) {
-                        dstColumns.forward(a, idx1 + r * rowStridel, scale);
-                    }
-                }
-                DoubleLargeArray temp = new DoubleLargeArray(rowsl, false);
-                for (long s = 0; s < slicesl; s++) {
-                    long idx1 = s * sliceStridel;
-                    for (long c = 0; c < columnsl; c++) {
-                        for (long r = 0; r < rowsl; r++) {
-                            long idx3 = idx1 + r * rowStridel + c;
-                            temp.setDouble(r, a.getDouble(idx3));
-                        }
-                        dstRows.forward(temp, scale);
-                        for (long r = 0; r < rowsl; r++) {
-                            long idx3 = idx1 + r * rowStridel + c;
-                            a.setDouble(idx3, temp.getDouble(r));
                         }
                     }
-                }
-                temp = new DoubleLargeArray(slicesl, false);
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            p = rowsl / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final long firstRow = l * p;
+                final long lastRow = (l == (nthreads - 1)) ? rowsl : firstRow + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        DoubleLargeArray temp = new DoubleLargeArray(slicesl, false);
+                        for (long r = firstRow; r < lastRow; r++) {
+                            long idx1 = r * rowStridel;
+                            for (long c = 0; c < columnsl; c++) {
+                                for (long s = 0; s < slicesl; s++) {
+                                    long idx3 = s * sliceStridel + idx1 + c;
+                                    temp.setDouble(s, a.getDouble(idx3));
+                                }
+                                dstSlices.forward(temp, scale);
+                                for (long s = 0; s < slicesl; s++) {
+                                    long idx3 = s * sliceStridel + idx1 + c;
+                                    a.setDouble(idx3, temp.getDouble(s));
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+        } else {
+            for (long s = 0; s < slicesl; s++) {
+                long idx1 = s * sliceStridel;
                 for (long r = 0; r < rowsl; r++) {
-                    long idx1 = r * rowStridel;
-                    for (long c = 0; c < columnsl; c++) {
-                        for (long s = 0; s < slicesl; s++) {
-                            long idx3 = s * sliceStridel + idx1 + c;
-                            temp.setDouble(s, a.getDouble(idx3));
-                        }
-                        dstSlices.forward(temp, scale);
-                        for (long s = 0; s < slicesl; s++) {
-                            long idx3 = s * sliceStridel + idx1 + c;
-                            a.setDouble(idx3, temp.getDouble(s));
-                        }
+                    dstColumns.forward(a, idx1 + r * rowStridel, scale);
+                }
+            }
+            DoubleLargeArray temp = new DoubleLargeArray(rowsl, false);
+            for (long s = 0; s < slicesl; s++) {
+                long idx1 = s * sliceStridel;
+                for (long c = 0; c < columnsl; c++) {
+                    for (long r = 0; r < rowsl; r++) {
+                        long idx3 = idx1 + r * rowStridel + c;
+                        temp.setDouble(r, a.getDouble(idx3));
+                    }
+                    dstRows.forward(temp, scale);
+                    for (long r = 0; r < rowsl; r++) {
+                        long idx3 = idx1 + r * rowStridel + c;
+                        a.setDouble(idx3, temp.getDouble(r));
+                    }
+                }
+            }
+            temp = new DoubleLargeArray(slicesl, false);
+            for (long r = 0; r < rowsl; r++) {
+                long idx1 = r * rowStridel;
+                for (long c = 0; c < columnsl; c++) {
+                    for (long s = 0; s < slicesl; s++) {
+                        long idx3 = s * sliceStridel + idx1 + c;
+                        temp.setDouble(s, a.getDouble(idx3));
+                    }
+                    dstSlices.forward(temp, scale);
+                    for (long s = 0; s < slicesl; s++) {
+                        long idx3 = s * sliceStridel + idx1 + c;
+                        a.setDouble(idx3, temp.getDouble(s));
                     }
                 }
             }
@@ -384,11 +433,12 @@ public class DoubleDST_3D {
     /**
      * Computes the 3D forward DST (DST-II) leaving the result in <code>a</code>
      * . The data is stored in 3D array.
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void forward(final double[][][] a, final boolean scale) {
+    public void forward(final double[][][] a, final boolean scale)
+    {
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
         if (isPowerOfTwo) {
             if ((nthreads > 1) && useThreads) {
@@ -398,98 +448,120 @@ public class DoubleDST_3D {
                 ddxt3da_sub(-1, a, scale);
                 ddxt3db_sub(-1, a, scale);
             }
-        } else {
-            if ((nthreads > 1) && useThreads && (slices >= nthreads) && (rows >= nthreads) && (columns >= nthreads)) {
-                Future<?>[] futures = new Future[nthreads];
-                int p = slices / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstSlice = l * p;
-                    final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            for (int s = firstSlice; s < lastSlice; s++) {
+        } else if ((nthreads > 1) && useThreads && (slices >= nthreads) && (rows >= nthreads) && (columns >= nthreads)) {
+            Future<?>[] futures = new Future[nthreads];
+            int p = slices / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final int firstSlice = l * p;
+                final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        for (int s = firstSlice; s < lastSlice; s++) {
+                            for (int r = 0; r < rows; r++) {
+                                dstColumns.forward(a[s][r], scale);
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            for (int l = 0; l < nthreads; l++) {
+                final int firstSlice = l * p;
+                final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        double[] temp = new double[rows];
+                        for (int s = firstSlice; s < lastSlice; s++) {
+                            for (int c = 0; c < columns; c++) {
                                 for (int r = 0; r < rows; r++) {
-                                    dstColumns.forward(a[s][r], scale);
+                                    temp[r] = a[s][r][c];
+                                }
+                                dstRows.forward(temp, scale);
+                                for (int r = 0; r < rows; r++) {
+                                    a[s][r][c] = temp[r];
                                 }
                             }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstSlice = l * p;
-                    final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            double[] temp = new double[rows];
-                            for (int s = firstSlice; s < lastSlice; s++) {
-                                for (int c = 0; c < columns; c++) {
-                                    for (int r = 0; r < rows; r++) {
-                                        temp[r] = a[s][r][c];
-                                    }
-                                    dstRows.forward(temp, scale);
-                                    for (int r = 0; r < rows; r++) {
-                                        a[s][r][c] = temp[r];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                p = rows / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstRow = l * p;
-                    final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            double[] temp = new double[slices];
-                            for (int r = firstRow; r < lastRow; r++) {
-                                for (int c = 0; c < columns; c++) {
-                                    for (int s = 0; s < slices; s++) {
-                                        temp[s] = a[s][r][c];
-                                    }
-                                    dstSlices.forward(temp, scale);
-                                    for (int s = 0; s < slices; s++) {
-                                        a[s][r][c] = temp[s];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-            } else {
-                for (int s = 0; s < slices; s++) {
-                    for (int r = 0; r < rows; r++) {
-                        dstColumns.forward(a[s][r], scale);
-                    }
-                }
-                double[] temp = new double[rows];
-                for (int s = 0; s < slices; s++) {
-                    for (int c = 0; c < columns; c++) {
-                        for (int r = 0; r < rows; r++) {
-                            temp[r] = a[s][r][c];
-                        }
-                        dstRows.forward(temp, scale);
-                        for (int r = 0; r < rows; r++) {
-                            a[s][r][c] = temp[r];
                         }
                     }
-                }
-                temp = new double[slices];
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            p = rows / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final int firstRow = l * p;
+                final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        double[] temp = new double[slices];
+                        for (int r = firstRow; r < lastRow; r++) {
+                            for (int c = 0; c < columns; c++) {
+                                for (int s = 0; s < slices; s++) {
+                                    temp[s] = a[s][r][c];
+                                }
+                                dstSlices.forward(temp, scale);
+                                for (int s = 0; s < slices; s++) {
+                                    a[s][r][c] = temp[s];
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+        } else {
+            for (int s = 0; s < slices; s++) {
                 for (int r = 0; r < rows; r++) {
-                    for (int c = 0; c < columns; c++) {
-                        for (int s = 0; s < slices; s++) {
-                            temp[s] = a[s][r][c];
-                        }
-                        dstSlices.forward(temp, scale);
-                        for (int s = 0; s < slices; s++) {
-                            a[s][r][c] = temp[s];
-                        }
+                    dstColumns.forward(a[s][r], scale);
+                }
+            }
+            double[] temp = new double[rows];
+            for (int s = 0; s < slices; s++) {
+                for (int c = 0; c < columns; c++) {
+                    for (int r = 0; r < rows; r++) {
+                        temp[r] = a[s][r][c];
+                    }
+                    dstRows.forward(temp, scale);
+                    for (int r = 0; r < rows; r++) {
+                        a[s][r][c] = temp[r];
+                    }
+                }
+            }
+            temp = new double[slices];
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < columns; c++) {
+                    for (int s = 0; s < slices; s++) {
+                        temp[s] = a[s][r][c];
+                    }
+                    dstSlices.forward(temp, scale);
+                    for (int s = 0; s < slices; s++) {
+                        a[s][r][c] = temp[s];
                     }
                 }
             }
@@ -503,11 +575,12 @@ public class DoubleDST_3D {
      * element (i,j,k) of 3D array x[slices][rows][columns] is stored in
      * a[i*sliceStride + j*rowStride + k], where sliceStride = rows * columns
      * and rowStride = columns.
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void inverse(final double[] a, final boolean scale) {
+    public void inverse(final double[] a, final boolean scale)
+    {
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
         if (isPowerOfTwo) {
             if ((nthreads > 1) && useThreads) {
@@ -517,112 +590,134 @@ public class DoubleDST_3D {
                 ddxt3da_sub(1, a, scale);
                 ddxt3db_sub(1, a, scale);
             }
-        } else {
-            if ((nthreads > 1) && useThreads && (slices >= nthreads) && (rows >= nthreads) && (columns >= nthreads)) {
-                Future<?>[] futures = new Future[nthreads];
-                int p = slices / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstSlice = l * p;
-                    final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            for (int s = firstSlice; s < lastSlice; s++) {
-                                int idx1 = s * sliceStride;
+        } else if ((nthreads > 1) && useThreads && (slices >= nthreads) && (rows >= nthreads) && (columns >= nthreads)) {
+            Future<?>[] futures = new Future[nthreads];
+            int p = slices / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final int firstSlice = l * p;
+                final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        for (int s = firstSlice; s < lastSlice; s++) {
+                            int idx1 = s * sliceStride;
+                            for (int r = 0; r < rows; r++) {
+                                dstColumns.inverse(a, idx1 + r * rowStride, scale);
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            for (int l = 0; l < nthreads; l++) {
+                final int firstSlice = l * p;
+                final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        double[] temp = new double[rows];
+                        for (int s = firstSlice; s < lastSlice; s++) {
+                            int idx1 = s * sliceStride;
+                            for (int c = 0; c < columns; c++) {
                                 for (int r = 0; r < rows; r++) {
-                                    dstColumns.inverse(a, idx1 + r * rowStride, scale);
+                                    int idx3 = idx1 + r * rowStride + c;
+                                    temp[r] = a[idx3];
+                                }
+                                dstRows.inverse(temp, scale);
+                                for (int r = 0; r < rows; r++) {
+                                    int idx3 = idx1 + r * rowStride + c;
+                                    a[idx3] = temp[r];
                                 }
                             }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstSlice = l * p;
-                    final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            double[] temp = new double[rows];
-                            for (int s = firstSlice; s < lastSlice; s++) {
-                                int idx1 = s * sliceStride;
-                                for (int c = 0; c < columns; c++) {
-                                    for (int r = 0; r < rows; r++) {
-                                        int idx3 = idx1 + r * rowStride + c;
-                                        temp[r] = a[idx3];
-                                    }
-                                    dstRows.inverse(temp, scale);
-                                    for (int r = 0; r < rows; r++) {
-                                        int idx3 = idx1 + r * rowStride + c;
-                                        a[idx3] = temp[r];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                p = rows / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstRow = l * p;
-                    final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            double[] temp = new double[slices];
-                            for (int r = firstRow; r < lastRow; r++) {
-                                int idx1 = r * rowStride;
-                                for (int c = 0; c < columns; c++) {
-                                    for (int s = 0; s < slices; s++) {
-                                        int idx3 = s * sliceStride + idx1 + c;
-                                        temp[s] = a[idx3];
-                                    }
-                                    dstSlices.inverse(temp, scale);
-                                    for (int s = 0; s < slices; s++) {
-                                        int idx3 = s * sliceStride + idx1 + c;
-                                        a[idx3] = temp[s];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-            } else {
-                for (int s = 0; s < slices; s++) {
-                    int idx1 = s * sliceStride;
-                    for (int r = 0; r < rows; r++) {
-                        dstColumns.inverse(a, idx1 + r * rowStride, scale);
-                    }
-                }
-                double[] temp = new double[rows];
-                for (int s = 0; s < slices; s++) {
-                    int idx1 = s * sliceStride;
-                    for (int c = 0; c < columns; c++) {
-                        for (int r = 0; r < rows; r++) {
-                            int idx3 = idx1 + r * rowStride + c;
-                            temp[r] = a[idx3];
-                        }
-                        dstRows.inverse(temp, scale);
-                        for (int r = 0; r < rows; r++) {
-                            int idx3 = idx1 + r * rowStride + c;
-                            a[idx3] = temp[r];
                         }
                     }
-                }
-                temp = new double[slices];
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            p = rows / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final int firstRow = l * p;
+                final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        double[] temp = new double[slices];
+                        for (int r = firstRow; r < lastRow; r++) {
+                            int idx1 = r * rowStride;
+                            for (int c = 0; c < columns; c++) {
+                                for (int s = 0; s < slices; s++) {
+                                    int idx3 = s * sliceStride + idx1 + c;
+                                    temp[s] = a[idx3];
+                                }
+                                dstSlices.inverse(temp, scale);
+                                for (int s = 0; s < slices; s++) {
+                                    int idx3 = s * sliceStride + idx1 + c;
+                                    a[idx3] = temp[s];
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+        } else {
+            for (int s = 0; s < slices; s++) {
+                int idx1 = s * sliceStride;
                 for (int r = 0; r < rows; r++) {
-                    int idx1 = r * rowStride;
-                    for (int c = 0; c < columns; c++) {
-                        for (int s = 0; s < slices; s++) {
-                            int idx3 = s * sliceStride + idx1 + c;
-                            temp[s] = a[idx3];
-                        }
-                        dstSlices.inverse(temp, scale);
-                        for (int s = 0; s < slices; s++) {
-                            int idx3 = s * sliceStride + idx1 + c;
-                            a[idx3] = temp[s];
-                        }
+                    dstColumns.inverse(a, idx1 + r * rowStride, scale);
+                }
+            }
+            double[] temp = new double[rows];
+            for (int s = 0; s < slices; s++) {
+                int idx1 = s * sliceStride;
+                for (int c = 0; c < columns; c++) {
+                    for (int r = 0; r < rows; r++) {
+                        int idx3 = idx1 + r * rowStride + c;
+                        temp[r] = a[idx3];
+                    }
+                    dstRows.inverse(temp, scale);
+                    for (int r = 0; r < rows; r++) {
+                        int idx3 = idx1 + r * rowStride + c;
+                        a[idx3] = temp[r];
+                    }
+                }
+            }
+            temp = new double[slices];
+            for (int r = 0; r < rows; r++) {
+                int idx1 = r * rowStride;
+                for (int c = 0; c < columns; c++) {
+                    for (int s = 0; s < slices; s++) {
+                        int idx3 = s * sliceStride + idx1 + c;
+                        temp[s] = a[idx3];
+                    }
+                    dstSlices.inverse(temp, scale);
+                    for (int s = 0; s < slices; s++) {
+                        int idx3 = s * sliceStride + idx1 + c;
+                        a[idx3] = temp[s];
                     }
                 }
             }
@@ -637,11 +732,12 @@ public class DoubleDST_3D {
      * element (i,j,k) of 3D array x[slices][rows][columns] is stored in
      * a[i*sliceStride + j*rowStride + k], where sliceStride = rows * columns
      * and rowStride = columns.
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void inverse(final DoubleLargeArray a, final boolean scale) {
+    public void inverse(final DoubleLargeArray a, final boolean scale)
+    {
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
         if (isPowerOfTwo) {
             if ((nthreads > 1) && useThreads) {
@@ -651,112 +747,134 @@ public class DoubleDST_3D {
                 ddxt3da_sub(1, a, scale);
                 ddxt3db_sub(1, a, scale);
             }
-        } else {
-            if ((nthreads > 1) && useThreads && (slicesl >= nthreads) && (rowsl >= nthreads) && (columnsl >= nthreads)) {
-                Future<?>[] futures = new Future[nthreads];
-                long p = slicesl / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final long firstSlice = l * p;
-                    final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            for (long s = firstSlice; s < lastSlice; s++) {
-                                long idx1 = s * sliceStride;
+        } else if ((nthreads > 1) && useThreads && (slicesl >= nthreads) && (rowsl >= nthreads) && (columnsl >= nthreads)) {
+            Future<?>[] futures = new Future[nthreads];
+            long p = slicesl / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final long firstSlice = l * p;
+                final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        for (long s = firstSlice; s < lastSlice; s++) {
+                            long idx1 = s * sliceStride;
+                            for (long r = 0; r < rowsl; r++) {
+                                dstColumns.inverse(a, idx1 + r * rowStride, scale);
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            for (int l = 0; l < nthreads; l++) {
+                final long firstSlice = l * p;
+                final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        DoubleLargeArray temp = new DoubleLargeArray(rowsl, false);
+                        for (long s = firstSlice; s < lastSlice; s++) {
+                            long idx1 = s * sliceStride;
+                            for (long c = 0; c < columnsl; c++) {
                                 for (long r = 0; r < rowsl; r++) {
-                                    dstColumns.inverse(a, idx1 + r * rowStride, scale);
+                                    long idx3 = idx1 + r * rowStride + c;
+                                    temp.setDouble(r, a.getDouble(idx3));
+                                }
+                                dstRows.inverse(temp, scale);
+                                for (long r = 0; r < rowsl; r++) {
+                                    long idx3 = idx1 + r * rowStride + c;
+                                    a.setDouble(idx3, temp.getDouble(r));
                                 }
                             }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                for (int l = 0; l < nthreads; l++) {
-                    final long firstSlice = l * p;
-                    final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            DoubleLargeArray temp = new DoubleLargeArray(rowsl, false);
-                            for (long s = firstSlice; s < lastSlice; s++) {
-                                long idx1 = s * sliceStride;
-                                for (long c = 0; c < columnsl; c++) {
-                                    for (long r = 0; r < rowsl; r++) {
-                                        long idx3 = idx1 + r * rowStride + c;
-                                        temp.setDouble(r, a.getDouble(idx3));
-                                    }
-                                    dstRows.inverse(temp, scale);
-                                    for (long r = 0; r < rowsl; r++) {
-                                        long idx3 = idx1 + r * rowStride + c;
-                                        a.setDouble(idx3, temp.getDouble(r));
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                p = rowsl / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final long firstRow = l * p;
-                    final long lastRow = (l == (nthreads - 1)) ? rowsl : firstRow + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            DoubleLargeArray temp = new DoubleLargeArray(slicesl, false);
-                            for (long r = firstRow; r < lastRow; r++) {
-                                long idx1 = r * rowStride;
-                                for (long c = 0; c < columnsl; c++) {
-                                    for (long s = 0; s < slicesl; s++) {
-                                        long idx3 = s * sliceStride + idx1 + c;
-                                        temp.setDouble(s, a.getDouble(idx3));
-                                    }
-                                    dstSlices.inverse(temp, scale);
-                                    for (long s = 0; s < slicesl; s++) {
-                                        long idx3 = s * sliceStride + idx1 + c;
-                                        a.setDouble(idx3, temp.getDouble(s));
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-            } else {
-                for (long s = 0; s < slicesl; s++) {
-                    long idx1 = s * sliceStride;
-                    for (long r = 0; r < rowsl; r++) {
-                        dstColumns.inverse(a, idx1 + r * rowStride, scale);
-                    }
-                }
-                DoubleLargeArray temp = new DoubleLargeArray(rowsl, false);
-                for (long s = 0; s < slicesl; s++) {
-                    long idx1 = s * sliceStride;
-                    for (long c = 0; c < columnsl; c++) {
-                        for (long r = 0; r < rowsl; r++) {
-                            long idx3 = idx1 + r * rowStride + c;
-                            temp.setDouble(r, a.getDouble(idx3));
-                        }
-                        dstRows.inverse(temp, scale);
-                        for (long r = 0; r < rowsl; r++) {
-                            long idx3 = idx1 + r * rowStride + c;
-                            a.setDouble(idx3, temp.getDouble(r));
                         }
                     }
-                }
-                temp = new DoubleLargeArray(slicesl, false);
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            p = rowsl / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final long firstRow = l * p;
+                final long lastRow = (l == (nthreads - 1)) ? rowsl : firstRow + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        DoubleLargeArray temp = new DoubleLargeArray(slicesl, false);
+                        for (long r = firstRow; r < lastRow; r++) {
+                            long idx1 = r * rowStride;
+                            for (long c = 0; c < columnsl; c++) {
+                                for (long s = 0; s < slicesl; s++) {
+                                    long idx3 = s * sliceStride + idx1 + c;
+                                    temp.setDouble(s, a.getDouble(idx3));
+                                }
+                                dstSlices.inverse(temp, scale);
+                                for (long s = 0; s < slicesl; s++) {
+                                    long idx3 = s * sliceStride + idx1 + c;
+                                    a.setDouble(idx3, temp.getDouble(s));
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+        } else {
+            for (long s = 0; s < slicesl; s++) {
+                long idx1 = s * sliceStride;
                 for (long r = 0; r < rowsl; r++) {
-                    long idx1 = r * rowStride;
-                    for (long c = 0; c < columnsl; c++) {
-                        for (long s = 0; s < slicesl; s++) {
-                            long idx3 = s * sliceStride + idx1 + c;
-                            temp.setDouble(s, a.getDouble(idx3));
-                        }
-                        dstSlices.inverse(temp, scale);
-                        for (long s = 0; s < slicesl; s++) {
-                            long idx3 = s * sliceStride + idx1 + c;
-                            a.setDouble(idx3, temp.getDouble(s));
-                        }
+                    dstColumns.inverse(a, idx1 + r * rowStride, scale);
+                }
+            }
+            DoubleLargeArray temp = new DoubleLargeArray(rowsl, false);
+            for (long s = 0; s < slicesl; s++) {
+                long idx1 = s * sliceStride;
+                for (long c = 0; c < columnsl; c++) {
+                    for (long r = 0; r < rowsl; r++) {
+                        long idx3 = idx1 + r * rowStride + c;
+                        temp.setDouble(r, a.getDouble(idx3));
+                    }
+                    dstRows.inverse(temp, scale);
+                    for (long r = 0; r < rowsl; r++) {
+                        long idx3 = idx1 + r * rowStride + c;
+                        a.setDouble(idx3, temp.getDouble(r));
+                    }
+                }
+            }
+            temp = new DoubleLargeArray(slicesl, false);
+            for (long r = 0; r < rowsl; r++) {
+                long idx1 = r * rowStride;
+                for (long c = 0; c < columnsl; c++) {
+                    for (long s = 0; s < slicesl; s++) {
+                        long idx3 = s * sliceStride + idx1 + c;
+                        temp.setDouble(s, a.getDouble(idx3));
+                    }
+                    dstSlices.inverse(temp, scale);
+                    for (long s = 0; s < slicesl; s++) {
+                        long idx3 = s * sliceStride + idx1 + c;
+                        a.setDouble(idx3, temp.getDouble(s));
                     }
                 }
             }
@@ -767,11 +885,12 @@ public class DoubleDST_3D {
     /**
      * Computes the 3D inverse DST (DST-III) leaving the result in
      * <code>a</code>. The data is stored in 3D array.
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void inverse(final double[][][] a, final boolean scale) {
+    public void inverse(final double[][][] a, final boolean scale)
+    {
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
         if (isPowerOfTwo) {
             if ((nthreads > 1) && useThreads) {
@@ -781,105 +900,128 @@ public class DoubleDST_3D {
                 ddxt3da_sub(1, a, scale);
                 ddxt3db_sub(1, a, scale);
             }
-        } else {
-            if ((nthreads > 1) && useThreads && (slices >= nthreads) && (rows >= nthreads) && (columns >= nthreads)) {
-                Future<?>[] futures = new Future[nthreads];
-                int p = slices / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstSlice = l * p;
-                    final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            for (int s = firstSlice; s < lastSlice; s++) {
+        } else if ((nthreads > 1) && useThreads && (slices >= nthreads) && (rows >= nthreads) && (columns >= nthreads)) {
+            Future<?>[] futures = new Future[nthreads];
+            int p = slices / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final int firstSlice = l * p;
+                final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        for (int s = firstSlice; s < lastSlice; s++) {
+                            for (int r = 0; r < rows; r++) {
+                                dstColumns.inverse(a[s][r], scale);
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            for (int l = 0; l < nthreads; l++) {
+                final int firstSlice = l * p;
+                final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        double[] temp = new double[rows];
+                        for (int s = firstSlice; s < lastSlice; s++) {
+                            for (int c = 0; c < columns; c++) {
                                 for (int r = 0; r < rows; r++) {
-                                    dstColumns.inverse(a[s][r], scale);
+                                    temp[r] = a[s][r][c];
+                                }
+                                dstRows.inverse(temp, scale);
+                                for (int r = 0; r < rows; r++) {
+                                    a[s][r][c] = temp[r];
                                 }
                             }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstSlice = l * p;
-                    final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            double[] temp = new double[rows];
-                            for (int s = firstSlice; s < lastSlice; s++) {
-                                for (int c = 0; c < columns; c++) {
-                                    for (int r = 0; r < rows; r++) {
-                                        temp[r] = a[s][r][c];
-                                    }
-                                    dstRows.inverse(temp, scale);
-                                    for (int r = 0; r < rows; r++) {
-                                        a[s][r][c] = temp[r];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                p = rows / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstRow = l * p;
-                    final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            double[] temp = new double[slices];
-                            for (int r = firstRow; r < lastRow; r++) {
-                                for (int c = 0; c < columns; c++) {
-                                    for (int s = 0; s < slices; s++) {
-                                        temp[s] = a[s][r][c];
-                                    }
-                                    dstSlices.inverse(temp, scale);
-                                    for (int s = 0; s < slices; s++) {
-                                        a[s][r][c] = temp[s];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-            } else {
-                for (int s = 0; s < slices; s++) {
-                    for (int r = 0; r < rows; r++) {
-                        dstColumns.inverse(a[s][r], scale);
-                    }
-                }
-                double[] temp = new double[rows];
-                for (int s = 0; s < slices; s++) {
-                    for (int c = 0; c < columns; c++) {
-                        for (int r = 0; r < rows; r++) {
-                            temp[r] = a[s][r][c];
-                        }
-                        dstRows.inverse(temp, scale);
-                        for (int r = 0; r < rows; r++) {
-                            a[s][r][c] = temp[r];
                         }
                     }
-                }
-                temp = new double[slices];
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            p = rows / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final int firstRow = l * p;
+                final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        double[] temp = new double[slices];
+                        for (int r = firstRow; r < lastRow; r++) {
+                            for (int c = 0; c < columns; c++) {
+                                for (int s = 0; s < slices; s++) {
+                                    temp[s] = a[s][r][c];
+                                }
+                                dstSlices.inverse(temp, scale);
+                                for (int s = 0; s < slices; s++) {
+                                    a[s][r][c] = temp[s];
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+        } else {
+            for (int s = 0; s < slices; s++) {
                 for (int r = 0; r < rows; r++) {
-                    for (int c = 0; c < columns; c++) {
-                        for (int s = 0; s < slices; s++) {
-                            temp[s] = a[s][r][c];
-                        }
-                        dstSlices.inverse(temp, scale);
-                        for (int s = 0; s < slices; s++) {
-                            a[s][r][c] = temp[s];
-                        }
+                    dstColumns.inverse(a[s][r], scale);
+                }
+            }
+            double[] temp = new double[rows];
+            for (int s = 0; s < slices; s++) {
+                for (int c = 0; c < columns; c++) {
+                    for (int r = 0; r < rows; r++) {
+                        temp[r] = a[s][r][c];
+                    }
+                    dstRows.inverse(temp, scale);
+                    for (int r = 0; r < rows; r++) {
+                        a[s][r][c] = temp[r];
+                    }
+                }
+            }
+            temp = new double[slices];
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < columns; c++) {
+                    for (int s = 0; s < slices; s++) {
+                        temp[s] = a[s][r][c];
+                    }
+                    dstSlices.inverse(temp, scale);
+                    for (int s = 0; s < slices; s++) {
+                        a[s][r][c] = temp[s];
                     }
                 }
             }
         }
     }
 
-    private void ddxt3da_sub(int isgn, double[] a, boolean scale) {
+    private void ddxt3da_sub(int isgn, double[] a, boolean scale)
+    {
         int idx0, idx1, idx2;
         int nt = 4 * rows;
         if (columns == 2) {
@@ -977,13 +1119,14 @@ public class DoubleDST_3D {
         }
     }
 
-    private void ddxt3da_sub(int isgn, DoubleLargeArray a, boolean scale) {
+    private void ddxt3da_sub(int isgn, DoubleLargeArray a, boolean scale)
+    {
         long idx0, idx1, idx2;
         long nt = 4 * rowsl;
         if (columnsl == 2) {
             nt >>= 1;
         }
-        DoubleLargeArray t = new DoubleLargeArray(nt, false);
+        DoubleLargeArray t = new DoubleLargeArray(nt);
         if (isgn == -1) {
             for (long s = 0; s < slicesl; s++) {
                 idx0 = s * sliceStridel;
@@ -1075,7 +1218,8 @@ public class DoubleDST_3D {
         }
     }
 
-    private void ddxt3da_sub(int isgn, double[][][] a, boolean scale) {
+    private void ddxt3da_sub(int isgn, double[][][] a, boolean scale)
+    {
         int idx2;
         int nt = 4 * rows;
         if (columns == 2) {
@@ -1164,7 +1308,8 @@ public class DoubleDST_3D {
         }
     }
 
-    private void ddxt3db_sub(int isgn, double[] a, boolean scale) {
+    private void ddxt3db_sub(int isgn, double[] a, boolean scale)
+    {
         int idx0, idx1, idx2;
         int nt = 4 * slices;
         if (columns == 2) {
@@ -1215,61 +1360,60 @@ public class DoubleDST_3D {
                     }
                 }
             }
-        } else {
-            if (columns > 2) {
-                for (int r = 0; r < rows; r++) {
-                    idx0 = r * rowStride;
-                    for (int c = 0; c < columns; c += 4) {
-                        for (int s = 0; s < slices; s++) {
-                            idx1 = s * sliceStride + idx0 + c;
-                            idx2 = slices + s;
-                            t[s] = a[idx1];
-                            t[idx2] = a[idx1 + 1];
-                            t[idx2 + slices] = a[idx1 + 2];
-                            t[idx2 + 2 * slices] = a[idx1 + 3];
-                        }
-                        dstSlices.inverse(t, 0, scale);
-                        dstSlices.inverse(t, slices, scale);
-                        dstSlices.inverse(t, 2 * slices, scale);
-                        dstSlices.inverse(t, 3 * slices, scale);
-
-                        for (int s = 0; s < slices; s++) {
-                            idx1 = s * sliceStride + idx0 + c;
-                            idx2 = slices + s;
-                            a[idx1] = t[s];
-                            a[idx1 + 1] = t[idx2];
-                            a[idx1 + 2] = t[idx2 + slices];
-                            a[idx1 + 3] = t[idx2 + 2 * slices];
-                        }
-                    }
-                }
-            } else if (columns == 2) {
-                for (int r = 0; r < rows; r++) {
-                    idx0 = r * rowStride;
+        } else if (columns > 2) {
+            for (int r = 0; r < rows; r++) {
+                idx0 = r * rowStride;
+                for (int c = 0; c < columns; c += 4) {
                     for (int s = 0; s < slices; s++) {
-                        idx1 = s * sliceStride + idx0;
+                        idx1 = s * sliceStride + idx0 + c;
+                        idx2 = slices + s;
                         t[s] = a[idx1];
-                        t[slices + s] = a[idx1 + 1];
+                        t[idx2] = a[idx1 + 1];
+                        t[idx2 + slices] = a[idx1 + 2];
+                        t[idx2 + 2 * slices] = a[idx1 + 3];
                     }
                     dstSlices.inverse(t, 0, scale);
                     dstSlices.inverse(t, slices, scale);
+                    dstSlices.inverse(t, 2 * slices, scale);
+                    dstSlices.inverse(t, 3 * slices, scale);
+
                     for (int s = 0; s < slices; s++) {
-                        idx1 = s * sliceStride + idx0;
+                        idx1 = s * sliceStride + idx0 + c;
+                        idx2 = slices + s;
                         a[idx1] = t[s];
-                        a[idx1 + 1] = t[slices + s];
+                        a[idx1 + 1] = t[idx2];
+                        a[idx1 + 2] = t[idx2 + slices];
+                        a[idx1 + 3] = t[idx2 + 2 * slices];
                     }
+                }
+            }
+        } else if (columns == 2) {
+            for (int r = 0; r < rows; r++) {
+                idx0 = r * rowStride;
+                for (int s = 0; s < slices; s++) {
+                    idx1 = s * sliceStride + idx0;
+                    t[s] = a[idx1];
+                    t[slices + s] = a[idx1 + 1];
+                }
+                dstSlices.inverse(t, 0, scale);
+                dstSlices.inverse(t, slices, scale);
+                for (int s = 0; s < slices; s++) {
+                    idx1 = s * sliceStride + idx0;
+                    a[idx1] = t[s];
+                    a[idx1 + 1] = t[slices + s];
                 }
             }
         }
     }
 
-    private void ddxt3db_sub(int isgn, DoubleLargeArray a, boolean scale) {
+    private void ddxt3db_sub(int isgn, DoubleLargeArray a, boolean scale)
+    {
         long idx0, idx1, idx2;
         long nt = 4 * slicesl;
         if (columnsl == 2) {
             nt >>= 1;
         }
-        DoubleLargeArray t = new DoubleLargeArray(nt, false);
+        DoubleLargeArray t = new DoubleLargeArray(nt);
         if (isgn == -1) {
             if (columnsl > 2) {
                 for (long r = 0; r < rowsl; r++) {
@@ -1314,55 +1458,54 @@ public class DoubleDST_3D {
                     }
                 }
             }
-        } else {
-            if (columnsl > 2) {
-                for (long r = 0; r < rowsl; r++) {
-                    idx0 = r * rowStridel;
-                    for (long c = 0; c < columnsl; c += 4) {
-                        for (long s = 0; s < slicesl; s++) {
-                            idx1 = s * sliceStridel + idx0 + c;
-                            idx2 = slicesl + s;
-                            t.setDouble(s, a.getDouble(idx1));
-                            t.setDouble(idx2, a.getDouble(idx1 + 1));
-                            t.setDouble(idx2 + slicesl, a.getDouble(idx1 + 2));
-                            t.setDouble(idx2 + 2 * slicesl, a.getDouble(idx1 + 3));
-                        }
-                        dstSlices.inverse(t, 0, scale);
-                        dstSlices.inverse(t, slicesl, scale);
-                        dstSlices.inverse(t, 2 * slicesl, scale);
-                        dstSlices.inverse(t, 3 * slicesl, scale);
-
-                        for (long s = 0; s < slicesl; s++) {
-                            idx1 = s * sliceStridel + idx0 + c;
-                            idx2 = slicesl + s;
-                            a.setDouble(idx1, t.getDouble(s));
-                            a.setDouble(idx1 + 1, t.getDouble(idx2));
-                            a.setDouble(idx1 + 2, t.getDouble(idx2 + slicesl));
-                            a.setDouble(idx1 + 3, t.getDouble(idx2 + 2 * slicesl));
-                        }
-                    }
-                }
-            } else if (columnsl == 2) {
-                for (long r = 0; r < rowsl; r++) {
-                    idx0 = r * rowStridel;
+        } else if (columnsl > 2) {
+            for (long r = 0; r < rowsl; r++) {
+                idx0 = r * rowStridel;
+                for (long c = 0; c < columnsl; c += 4) {
                     for (long s = 0; s < slicesl; s++) {
-                        idx1 = s * sliceStridel + idx0;
+                        idx1 = s * sliceStridel + idx0 + c;
+                        idx2 = slicesl + s;
                         t.setDouble(s, a.getDouble(idx1));
-                        t.setDouble(slicesl + s, a.getDouble(idx1 + 1));
+                        t.setDouble(idx2, a.getDouble(idx1 + 1));
+                        t.setDouble(idx2 + slicesl, a.getDouble(idx1 + 2));
+                        t.setDouble(idx2 + 2 * slicesl, a.getDouble(idx1 + 3));
                     }
                     dstSlices.inverse(t, 0, scale);
                     dstSlices.inverse(t, slicesl, scale);
+                    dstSlices.inverse(t, 2 * slicesl, scale);
+                    dstSlices.inverse(t, 3 * slicesl, scale);
+
                     for (long s = 0; s < slicesl; s++) {
-                        idx1 = s * sliceStridel + idx0;
+                        idx1 = s * sliceStridel + idx0 + c;
+                        idx2 = slicesl + s;
                         a.setDouble(idx1, t.getDouble(s));
-                        a.setDouble(idx1 + 1, t.getDouble(slicesl + s));
+                        a.setDouble(idx1 + 1, t.getDouble(idx2));
+                        a.setDouble(idx1 + 2, t.getDouble(idx2 + slicesl));
+                        a.setDouble(idx1 + 3, t.getDouble(idx2 + 2 * slicesl));
                     }
+                }
+            }
+        } else if (columnsl == 2) {
+            for (long r = 0; r < rowsl; r++) {
+                idx0 = r * rowStridel;
+                for (long s = 0; s < slicesl; s++) {
+                    idx1 = s * sliceStridel + idx0;
+                    t.setDouble(s, a.getDouble(idx1));
+                    t.setDouble(slicesl + s, a.getDouble(idx1 + 1));
+                }
+                dstSlices.inverse(t, 0, scale);
+                dstSlices.inverse(t, slicesl, scale);
+                for (long s = 0; s < slicesl; s++) {
+                    idx1 = s * sliceStridel + idx0;
+                    a.setDouble(idx1, t.getDouble(s));
+                    a.setDouble(idx1 + 1, t.getDouble(slicesl + s));
                 }
             }
         }
     }
 
-    private void ddxt3db_sub(int isgn, double[][][] a, boolean scale) {
+    private void ddxt3db_sub(int isgn, double[][][] a, boolean scale)
+    {
         int idx2;
         int nt = 4 * slices;
         if (columns == 2) {
@@ -1408,49 +1551,48 @@ public class DoubleDST_3D {
                     }
                 }
             }
-        } else {
-            if (columns > 2) {
-                for (int r = 0; r < rows; r++) {
-                    for (int c = 0; c < columns; c += 4) {
-                        for (int s = 0; s < slices; s++) {
-                            idx2 = slices + s;
-                            t[s] = a[s][r][c];
-                            t[idx2] = a[s][r][c + 1];
-                            t[idx2 + slices] = a[s][r][c + 2];
-                            t[idx2 + 2 * slices] = a[s][r][c + 3];
-                        }
-                        dstSlices.inverse(t, 0, scale);
-                        dstSlices.inverse(t, slices, scale);
-                        dstSlices.inverse(t, 2 * slices, scale);
-                        dstSlices.inverse(t, 3 * slices, scale);
-
-                        for (int s = 0; s < slices; s++) {
-                            idx2 = slices + s;
-                            a[s][r][c] = t[s];
-                            a[s][r][c + 1] = t[idx2];
-                            a[s][r][c + 2] = t[idx2 + slices];
-                            a[s][r][c + 3] = t[idx2 + 2 * slices];
-                        }
-                    }
-                }
-            } else if (columns == 2) {
-                for (int r = 0; r < rows; r++) {
+        } else if (columns > 2) {
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < columns; c += 4) {
                     for (int s = 0; s < slices; s++) {
-                        t[s] = a[s][r][0];
-                        t[slices + s] = a[s][r][1];
+                        idx2 = slices + s;
+                        t[s] = a[s][r][c];
+                        t[idx2] = a[s][r][c + 1];
+                        t[idx2 + slices] = a[s][r][c + 2];
+                        t[idx2 + 2 * slices] = a[s][r][c + 3];
                     }
                     dstSlices.inverse(t, 0, scale);
                     dstSlices.inverse(t, slices, scale);
+                    dstSlices.inverse(t, 2 * slices, scale);
+                    dstSlices.inverse(t, 3 * slices, scale);
+
                     for (int s = 0; s < slices; s++) {
-                        a[s][r][0] = t[s];
-                        a[s][r][1] = t[slices + s];
+                        idx2 = slices + s;
+                        a[s][r][c] = t[s];
+                        a[s][r][c + 1] = t[idx2];
+                        a[s][r][c + 2] = t[idx2 + slices];
+                        a[s][r][c + 3] = t[idx2 + 2 * slices];
                     }
+                }
+            }
+        } else if (columns == 2) {
+            for (int r = 0; r < rows; r++) {
+                for (int s = 0; s < slices; s++) {
+                    t[s] = a[s][r][0];
+                    t[slices + s] = a[s][r][1];
+                }
+                dstSlices.inverse(t, 0, scale);
+                dstSlices.inverse(t, slices, scale);
+                for (int s = 0; s < slices; s++) {
+                    a[s][r][0] = t[s];
+                    a[s][r][1] = t[slices + s];
                 }
             }
         }
     }
 
-    private void ddxt3da_subth(final int isgn, final double[] a, final boolean scale) {
+    private void ddxt3da_subth(final int isgn, final double[] a, final boolean scale)
+    {
         final int nthreads = ConcurrencyUtils.getNumberOfThreads() > slices ? slices : ConcurrencyUtils.getNumberOfThreads();
 
         int nt = 4 * rows;
@@ -1462,9 +1604,11 @@ public class DoubleDST_3D {
 
         for (int i = 0; i < nthreads; i++) {
             final int n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
 
-                public void run() {
+                public void run()
+                {
                     int idx0, idx1, idx2;
                     double[] t = new double[ntf];
                     if (isgn == -1) {
@@ -1478,7 +1622,7 @@ public class DoubleDST_3D {
                                     for (int r = 0; r < rows; r++) {
                                         idx1 = idx0 + r * rowStride + c;
                                         idx2 = rows + r;
-                                        t[ r] = a[idx1];
+                                        t[r] = a[idx1];
                                         t[idx2] = a[idx1 + 1];
                                         t[idx2 + rows] = a[idx1 + 2];
                                         t[idx2 + 2 * rows] = a[idx1 + 3];
@@ -1490,7 +1634,7 @@ public class DoubleDST_3D {
                                     for (int r = 0; r < rows; r++) {
                                         idx1 = idx0 + r * rowStride + c;
                                         idx2 = rows + r;
-                                        a[idx1] = t[ r];
+                                        a[idx1] = t[r];
                                         a[idx1 + 1] = t[idx2];
                                         a[idx1 + 2] = t[idx2 + rows];
                                         a[idx1 + 3] = t[idx2 + 2 * rows];
@@ -1499,15 +1643,15 @@ public class DoubleDST_3D {
                             } else if (columns == 2) {
                                 for (int r = 0; r < rows; r++) {
                                     idx1 = idx0 + r * rowStride;
-                                    t[ r] = a[idx1];
-                                    t[ rows + r] = a[idx1 + 1];
+                                    t[r] = a[idx1];
+                                    t[rows + r] = a[idx1 + 1];
                                 }
                                 dstRows.forward(t, 0, scale);
                                 dstRows.forward(t, rows, scale);
                                 for (int r = 0; r < rows; r++) {
                                     idx1 = idx0 + r * rowStride;
-                                    a[idx1] = t[ r];
-                                    a[idx1 + 1] = t[ rows + r];
+                                    a[idx1] = t[r];
+                                    a[idx1 + 1] = t[rows + r];
                                 }
                             }
                         }
@@ -1522,7 +1666,7 @@ public class DoubleDST_3D {
                                     for (int r = 0; r < rows; r++) {
                                         idx1 = idx0 + r * rowStride + c;
                                         idx2 = rows + r;
-                                        t[ r] = a[idx1];
+                                        t[r] = a[idx1];
                                         t[idx2] = a[idx1 + 1];
                                         t[idx2 + rows] = a[idx1 + 2];
                                         t[idx2 + 2 * rows] = a[idx1 + 3];
@@ -1534,7 +1678,7 @@ public class DoubleDST_3D {
                                     for (int r = 0; r < rows; r++) {
                                         idx1 = idx0 + r * rowStride + c;
                                         idx2 = rows + r;
-                                        a[idx1] = t[ r];
+                                        a[idx1] = t[r];
                                         a[idx1 + 1] = t[idx2];
                                         a[idx1 + 2] = t[idx2 + rows];
                                         a[idx1 + 3] = t[idx2 + 2 * rows];
@@ -1543,15 +1687,15 @@ public class DoubleDST_3D {
                             } else if (columns == 2) {
                                 for (int r = 0; r < rows; r++) {
                                     idx1 = idx0 + r * rowStride;
-                                    t[ r] = a[idx1];
-                                    t[ rows + r] = a[idx1 + 1];
+                                    t[r] = a[idx1];
+                                    t[rows + r] = a[idx1 + 1];
                                 }
                                 dstRows.inverse(t, 0, scale);
                                 dstRows.inverse(t, rows, scale);
                                 for (int r = 0; r < rows; r++) {
                                     idx1 = idx0 + r * rowStride;
-                                    a[idx1] = t[ r];
-                                    a[idx1 + 1] = t[ rows + r];
+                                    a[idx1] = t[r];
+                                    a[idx1 + 1] = t[rows + r];
                                 }
                             }
                         }
@@ -1559,10 +1703,17 @@ public class DoubleDST_3D {
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void ddxt3da_subth(final int isgn, final DoubleLargeArray a, final boolean scale) {
+    private void ddxt3da_subth(final int isgn, final DoubleLargeArray a, final boolean scale)
+    {
         final int nthreads = (int) (ConcurrencyUtils.getNumberOfThreads() > slicesl ? slicesl : ConcurrencyUtils.getNumberOfThreads());
 
         long nt = 4 * rowsl;
@@ -1574,11 +1725,13 @@ public class DoubleDST_3D {
 
         for (int i = 0; i < nthreads; i++) {
             final long n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
 
-                public void run() {
+                public void run()
+                {
                     long idx0, idx1, idx2;
-                    DoubleLargeArray t = new DoubleLargeArray(ntf, false);
+                    DoubleLargeArray t = new DoubleLargeArray(ntf);
                     if (isgn == -1) {
                         for (long s = n0; s < slicesl; s += nthreads) {
                             idx0 = s * sliceStridel;
@@ -1671,10 +1824,17 @@ public class DoubleDST_3D {
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void ddxt3da_subth(final int isgn, final double[][][] a, final boolean scale) {
+    private void ddxt3da_subth(final int isgn, final double[][][] a, final boolean scale)
+    {
         final int nthreads = ConcurrencyUtils.getNumberOfThreads() > slices ? slices : ConcurrencyUtils.getNumberOfThreads();
         int nt = 4 * rows;
         if (columns == 2) {
@@ -1685,9 +1845,11 @@ public class DoubleDST_3D {
 
         for (int i = 0; i < nthreads; i++) {
             final int n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
 
-                public void run() {
+                public void run()
+                {
                     int idx2;
                     double[] t = new double[ntf];
                     if (isgn == -1) {
@@ -1699,7 +1861,7 @@ public class DoubleDST_3D {
                                 for (int c = 0; c < columns; c += 4) {
                                     for (int r = 0; r < rows; r++) {
                                         idx2 = rows + r;
-                                        t[ r] = a[s][r][c];
+                                        t[r] = a[s][r][c];
                                         t[idx2] = a[s][r][c + 1];
                                         t[idx2 + rows] = a[s][r][c + 2];
                                         t[idx2 + 2 * rows] = a[s][r][c + 3];
@@ -1710,7 +1872,7 @@ public class DoubleDST_3D {
                                     dstRows.forward(t, 3 * rows, scale);
                                     for (int r = 0; r < rows; r++) {
                                         idx2 = rows + r;
-                                        a[s][r][c] = t[ r];
+                                        a[s][r][c] = t[r];
                                         a[s][r][c + 1] = t[idx2];
                                         a[s][r][c + 2] = t[idx2 + rows];
                                         a[s][r][c + 3] = t[idx2 + 2 * rows];
@@ -1718,14 +1880,14 @@ public class DoubleDST_3D {
                                 }
                             } else if (columns == 2) {
                                 for (int r = 0; r < rows; r++) {
-                                    t[ r] = a[s][r][0];
-                                    t[ rows + r] = a[s][r][1];
+                                    t[r] = a[s][r][0];
+                                    t[rows + r] = a[s][r][1];
                                 }
                                 dstRows.forward(t, 0, scale);
                                 dstRows.forward(t, rows, scale);
                                 for (int r = 0; r < rows; r++) {
-                                    a[s][r][0] = t[ r];
-                                    a[s][r][1] = t[ rows + r];
+                                    a[s][r][0] = t[r];
+                                    a[s][r][1] = t[rows + r];
                                 }
                             }
                         }
@@ -1738,7 +1900,7 @@ public class DoubleDST_3D {
                                 for (int c = 0; c < columns; c += 4) {
                                     for (int r = 0; r < rows; r++) {
                                         idx2 = rows + r;
-                                        t[ r] = a[s][r][c];
+                                        t[r] = a[s][r][c];
                                         t[idx2] = a[s][r][c + 1];
                                         t[idx2 + rows] = a[s][r][c + 2];
                                         t[idx2 + 2 * rows] = a[s][r][c + 3];
@@ -1749,7 +1911,7 @@ public class DoubleDST_3D {
                                     dstRows.inverse(t, 3 * rows, scale);
                                     for (int r = 0; r < rows; r++) {
                                         idx2 = rows + r;
-                                        a[s][r][c] = t[ r];
+                                        a[s][r][c] = t[r];
                                         a[s][r][c + 1] = t[idx2];
                                         a[s][r][c + 2] = t[idx2 + rows];
                                         a[s][r][c + 3] = t[idx2 + 2 * rows];
@@ -1757,14 +1919,14 @@ public class DoubleDST_3D {
                                 }
                             } else if (columns == 2) {
                                 for (int r = 0; r < rows; r++) {
-                                    t[ r] = a[s][r][0];
-                                    t[ rows + r] = a[s][r][1];
+                                    t[r] = a[s][r][0];
+                                    t[rows + r] = a[s][r][1];
                                 }
                                 dstRows.inverse(t, 0, scale);
                                 dstRows.inverse(t, rows, scale);
                                 for (int r = 0; r < rows; r++) {
-                                    a[s][r][0] = t[ r];
-                                    a[s][r][1] = t[ rows + r];
+                                    a[s][r][0] = t[r];
+                                    a[s][r][1] = t[rows + r];
                                 }
                             }
                         }
@@ -1772,10 +1934,17 @@ public class DoubleDST_3D {
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void ddxt3db_subth(final int isgn, final double[] a, final boolean scale) {
+    private void ddxt3db_subth(final int isgn, final double[] a, final boolean scale)
+    {
         final int nthreads = ConcurrencyUtils.getNumberOfThreads() > rows ? rows : ConcurrencyUtils.getNumberOfThreads();
         int nt = 4 * slices;
         if (columns == 2) {
@@ -1786,9 +1955,11 @@ public class DoubleDST_3D {
 
         for (int i = 0; i < nthreads; i++) {
             final int n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
 
-                public void run() {
+                public void run()
+                {
                     int idx0, idx1, idx2;
                     double[] t = new double[ntf];
                     if (isgn == -1) {
@@ -1799,7 +1970,7 @@ public class DoubleDST_3D {
                                     for (int s = 0; s < slices; s++) {
                                         idx1 = s * sliceStride + idx0 + c;
                                         idx2 = slices + s;
-                                        t[ s] = a[idx1];
+                                        t[s] = a[idx1];
                                         t[idx2] = a[idx1 + 1];
                                         t[idx2 + slices] = a[idx1 + 2];
                                         t[idx2 + 2 * slices] = a[idx1 + 3];
@@ -1811,7 +1982,7 @@ public class DoubleDST_3D {
                                     for (int s = 0; s < slices; s++) {
                                         idx1 = s * sliceStride + idx0 + c;
                                         idx2 = slices + s;
-                                        a[idx1] = t[ s];
+                                        a[idx1] = t[s];
                                         a[idx1 + 1] = t[idx2];
                                         a[idx1 + 2] = t[idx2 + slices];
                                         a[idx1 + 3] = t[idx2 + 2 * slices];
@@ -1823,71 +1994,76 @@ public class DoubleDST_3D {
                                 idx0 = r * rowStride;
                                 for (int s = 0; s < slices; s++) {
                                     idx1 = s * sliceStride + idx0;
-                                    t[ s] = a[idx1];
-                                    t[ slices + s] = a[idx1 + 1];
+                                    t[s] = a[idx1];
+                                    t[slices + s] = a[idx1 + 1];
                                 }
                                 dstSlices.forward(t, 0, scale);
                                 dstSlices.forward(t, slices, scale);
                                 for (int s = 0; s < slices; s++) {
                                     idx1 = s * sliceStride + idx0;
-                                    a[idx1] = t[ s];
-                                    a[idx1 + 1] = t[ slices + s];
+                                    a[idx1] = t[s];
+                                    a[idx1 + 1] = t[slices + s];
                                 }
                             }
                         }
-                    } else {
-                        if (columns > 2) {
-                            for (int r = n0; r < rows; r += nthreads) {
-                                idx0 = r * rowStride;
-                                for (int c = 0; c < columns; c += 4) {
-                                    for (int s = 0; s < slices; s++) {
-                                        idx1 = s * sliceStride + idx0 + c;
-                                        idx2 = slices + s;
-                                        t[ s] = a[idx1];
-                                        t[idx2] = a[idx1 + 1];
-                                        t[idx2 + slices] = a[idx1 + 2];
-                                        t[idx2 + 2 * slices] = a[idx1 + 3];
-                                    }
-                                    dstSlices.inverse(t, 0, scale);
-                                    dstSlices.inverse(t, slices, scale);
-                                    dstSlices.inverse(t, 2 * slices, scale);
-                                    dstSlices.inverse(t, 3 * slices, scale);
-                                    for (int s = 0; s < slices; s++) {
-                                        idx1 = s * sliceStride + idx0 + c;
-                                        idx2 = slices + s;
-                                        a[idx1] = t[ s];
-                                        a[idx1 + 1] = t[idx2];
-                                        a[idx1 + 2] = t[idx2 + slices];
-                                        a[idx1 + 3] = t[idx2 + 2 * slices];
-                                    }
-                                }
-                            }
-                        } else if (columns == 2) {
-                            for (int r = n0; r < rows; r += nthreads) {
-                                idx0 = r * rowStride;
+                    } else if (columns > 2) {
+                        for (int r = n0; r < rows; r += nthreads) {
+                            idx0 = r * rowStride;
+                            for (int c = 0; c < columns; c += 4) {
                                 for (int s = 0; s < slices; s++) {
-                                    idx1 = s * sliceStride + idx0;
-                                    t[ s] = a[idx1];
-                                    t[ slices + s] = a[idx1 + 1];
+                                    idx1 = s * sliceStride + idx0 + c;
+                                    idx2 = slices + s;
+                                    t[s] = a[idx1];
+                                    t[idx2] = a[idx1 + 1];
+                                    t[idx2 + slices] = a[idx1 + 2];
+                                    t[idx2 + 2 * slices] = a[idx1 + 3];
                                 }
                                 dstSlices.inverse(t, 0, scale);
                                 dstSlices.inverse(t, slices, scale);
-
+                                dstSlices.inverse(t, 2 * slices, scale);
+                                dstSlices.inverse(t, 3 * slices, scale);
                                 for (int s = 0; s < slices; s++) {
-                                    idx1 = s * sliceStride + idx0;
-                                    a[idx1] = t[ s];
-                                    a[idx1 + 1] = t[ slices + s];
+                                    idx1 = s * sliceStride + idx0 + c;
+                                    idx2 = slices + s;
+                                    a[idx1] = t[s];
+                                    a[idx1 + 1] = t[idx2];
+                                    a[idx1 + 2] = t[idx2 + slices];
+                                    a[idx1 + 3] = t[idx2 + 2 * slices];
                                 }
+                            }
+                        }
+                    } else if (columns == 2) {
+                        for (int r = n0; r < rows; r += nthreads) {
+                            idx0 = r * rowStride;
+                            for (int s = 0; s < slices; s++) {
+                                idx1 = s * sliceStride + idx0;
+                                t[s] = a[idx1];
+                                t[slices + s] = a[idx1 + 1];
+                            }
+                            dstSlices.inverse(t, 0, scale);
+                            dstSlices.inverse(t, slices, scale);
+
+                            for (int s = 0; s < slices; s++) {
+                                idx1 = s * sliceStride + idx0;
+                                a[idx1] = t[s];
+                                a[idx1 + 1] = t[slices + s];
                             }
                         }
                     }
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void ddxt3db_subth(final int isgn, final DoubleLargeArray a, final boolean scale) {
+    private void ddxt3db_subth(final int isgn, final DoubleLargeArray a, final boolean scale)
+    {
         final int nthreads = (int) (ConcurrencyUtils.getNumberOfThreads() > rowsl ? rowsl : ConcurrencyUtils.getNumberOfThreads());
         long nt = 4 * slicesl;
         if (columnsl == 2) {
@@ -1898,11 +2074,13 @@ public class DoubleDST_3D {
 
         for (int i = 0; i < nthreads; i++) {
             final long n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
 
-                public void run() {
+                public void run()
+                {
                     long idx0, idx1, idx2;
-                    DoubleLargeArray t = new DoubleLargeArray(ntf, false);
+                    DoubleLargeArray t = new DoubleLargeArray(ntf);
                     if (isgn == -1) {
                         if (columnsl > 2) {
                             for (long r = n0; r < rowsl; r += nthreads) {
@@ -1947,59 +2125,64 @@ public class DoubleDST_3D {
                                 }
                             }
                         }
-                    } else {
-                        if (columnsl > 2) {
-                            for (long r = n0; r < rowsl; r += nthreads) {
-                                idx0 = r * rowStridel;
-                                for (long c = 0; c < columnsl; c += 4) {
-                                    for (long s = 0; s < slicesl; s++) {
-                                        idx1 = s * sliceStridel + idx0 + c;
-                                        idx2 = slicesl + s;
-                                        t.setDouble(s, a.getDouble(idx1));
-                                        t.setDouble(idx2, a.getDouble(idx1 + 1));
-                                        t.setDouble(idx2 + slicesl, a.getDouble(idx1 + 2));
-                                        t.setDouble(idx2 + 2 * slicesl, a.getDouble(idx1 + 3));
-                                    }
-                                    dstSlices.inverse(t, 0, scale);
-                                    dstSlices.inverse(t, slicesl, scale);
-                                    dstSlices.inverse(t, 2 * slicesl, scale);
-                                    dstSlices.inverse(t, 3 * slicesl, scale);
-                                    for (long s = 0; s < slicesl; s++) {
-                                        idx1 = s * sliceStridel + idx0 + c;
-                                        idx2 = slicesl + s;
-                                        a.setDouble(idx1, t.getDouble(s));
-                                        a.setDouble(idx1 + 1, t.getDouble(idx2));
-                                        a.setDouble(idx1 + 2, t.getDouble(idx2 + slicesl));
-                                        a.setDouble(idx1 + 3, t.getDouble(idx2 + 2 * slicesl));
-                                    }
-                                }
-                            }
-                        } else if (columnsl == 2) {
-                            for (long r = n0; r < rowsl; r += nthreads) {
-                                idx0 = r * rowStridel;
+                    } else if (columnsl > 2) {
+                        for (long r = n0; r < rowsl; r += nthreads) {
+                            idx0 = r * rowStridel;
+                            for (long c = 0; c < columnsl; c += 4) {
                                 for (long s = 0; s < slicesl; s++) {
-                                    idx1 = s * sliceStridel + idx0;
+                                    idx1 = s * sliceStridel + idx0 + c;
+                                    idx2 = slicesl + s;
                                     t.setDouble(s, a.getDouble(idx1));
-                                    t.setDouble(slicesl + s, a.getDouble(idx1 + 1));
+                                    t.setDouble(idx2, a.getDouble(idx1 + 1));
+                                    t.setDouble(idx2 + slicesl, a.getDouble(idx1 + 2));
+                                    t.setDouble(idx2 + 2 * slicesl, a.getDouble(idx1 + 3));
                                 }
                                 dstSlices.inverse(t, 0, scale);
                                 dstSlices.inverse(t, slicesl, scale);
-
+                                dstSlices.inverse(t, 2 * slicesl, scale);
+                                dstSlices.inverse(t, 3 * slicesl, scale);
                                 for (long s = 0; s < slicesl; s++) {
-                                    idx1 = s * sliceStridel + idx0;
+                                    idx1 = s * sliceStridel + idx0 + c;
+                                    idx2 = slicesl + s;
                                     a.setDouble(idx1, t.getDouble(s));
-                                    a.setDouble(idx1 + 1, t.getDouble(slicesl + s));
+                                    a.setDouble(idx1 + 1, t.getDouble(idx2));
+                                    a.setDouble(idx1 + 2, t.getDouble(idx2 + slicesl));
+                                    a.setDouble(idx1 + 3, t.getDouble(idx2 + 2 * slicesl));
                                 }
+                            }
+                        }
+                    } else if (columnsl == 2) {
+                        for (long r = n0; r < rowsl; r += nthreads) {
+                            idx0 = r * rowStridel;
+                            for (long s = 0; s < slicesl; s++) {
+                                idx1 = s * sliceStridel + idx0;
+                                t.setDouble(s, a.getDouble(idx1));
+                                t.setDouble(slicesl + s, a.getDouble(idx1 + 1));
+                            }
+                            dstSlices.inverse(t, 0, scale);
+                            dstSlices.inverse(t, slicesl, scale);
+
+                            for (long s = 0; s < slicesl; s++) {
+                                idx1 = s * sliceStridel + idx0;
+                                a.setDouble(idx1, t.getDouble(s));
+                                a.setDouble(idx1 + 1, t.getDouble(slicesl + s));
                             }
                         }
                     }
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void ddxt3db_subth(final int isgn, final double[][][] a, final boolean scale) {
+    private void ddxt3db_subth(final int isgn, final double[][][] a, final boolean scale)
+    {
         final int nthreads = ConcurrencyUtils.getNumberOfThreads() > rows ? rows : ConcurrencyUtils.getNumberOfThreads();
         int nt = 4 * slices;
         if (columns == 2) {
@@ -2010,9 +2193,11 @@ public class DoubleDST_3D {
 
         for (int i = 0; i < nthreads; i++) {
             final int n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
 
-                public void run() {
+                public void run()
+                {
                     int idx2;
                     double[] t = new double[ntf];
                     if (isgn == -1) {
@@ -2021,7 +2206,7 @@ public class DoubleDST_3D {
                                 for (int c = 0; c < columns; c += 4) {
                                     for (int s = 0; s < slices; s++) {
                                         idx2 = slices + s;
-                                        t[ s] = a[s][r][c];
+                                        t[s] = a[s][r][c];
                                         t[idx2] = a[s][r][c + 1];
                                         t[idx2 + slices] = a[s][r][c + 2];
                                         t[idx2 + 2 * slices] = a[s][r][c + 3];
@@ -2032,7 +2217,7 @@ public class DoubleDST_3D {
                                     dstSlices.forward(t, 3 * slices, scale);
                                     for (int s = 0; s < slices; s++) {
                                         idx2 = slices + s;
-                                        a[s][r][c] = t[ s];
+                                        a[s][r][c] = t[s];
                                         a[s][r][c + 1] = t[idx2];
                                         a[s][r][c + 2] = t[idx2 + slices];
                                         a[s][r][c + 3] = t[idx2 + 2 * slices];
@@ -2042,60 +2227,64 @@ public class DoubleDST_3D {
                         } else if (columns == 2) {
                             for (int r = n0; r < rows; r += nthreads) {
                                 for (int s = 0; s < slices; s++) {
-                                    t[ s] = a[s][r][0];
-                                    t[ slices + s] = a[s][r][1];
+                                    t[s] = a[s][r][0];
+                                    t[slices + s] = a[s][r][1];
                                 }
                                 dstSlices.forward(t, 0, scale);
                                 dstSlices.forward(t, slices, scale);
                                 for (int s = 0; s < slices; s++) {
-                                    a[s][r][0] = t[ s];
-                                    a[s][r][1] = t[ slices + s];
+                                    a[s][r][0] = t[s];
+                                    a[s][r][1] = t[slices + s];
                                 }
                             }
                         }
-                    } else {
-                        if (columns > 2) {
-                            for (int r = n0; r < rows; r += nthreads) {
-                                for (int c = 0; c < columns; c += 4) {
-                                    for (int s = 0; s < slices; s++) {
-                                        idx2 = slices + s;
-                                        t[ s] = a[s][r][c];
-                                        t[idx2] = a[s][r][c + 1];
-                                        t[idx2 + slices] = a[s][r][c + 2];
-                                        t[idx2 + 2 * slices] = a[s][r][c + 3];
-                                    }
-                                    dstSlices.inverse(t, 0, scale);
-                                    dstSlices.inverse(t, slices, scale);
-                                    dstSlices.inverse(t, 2 * slices, scale);
-                                    dstSlices.inverse(t, 3 * slices, scale);
-                                    for (int s = 0; s < slices; s++) {
-                                        idx2 = slices + s;
-                                        a[s][r][c] = t[ s];
-                                        a[s][r][c + 1] = t[idx2];
-                                        a[s][r][c + 2] = t[idx2 + slices];
-                                        a[s][r][c + 3] = t[idx2 + 2 * slices];
-                                    }
-                                }
-                            }
-                        } else if (columns == 2) {
-                            for (int r = n0; r < rows; r += nthreads) {
+                    } else if (columns > 2) {
+                        for (int r = n0; r < rows; r += nthreads) {
+                            for (int c = 0; c < columns; c += 4) {
                                 for (int s = 0; s < slices; s++) {
-                                    t[ s] = a[s][r][0];
-                                    t[ slices + s] = a[s][r][1];
+                                    idx2 = slices + s;
+                                    t[s] = a[s][r][c];
+                                    t[idx2] = a[s][r][c + 1];
+                                    t[idx2 + slices] = a[s][r][c + 2];
+                                    t[idx2 + 2 * slices] = a[s][r][c + 3];
                                 }
                                 dstSlices.inverse(t, 0, scale);
                                 dstSlices.inverse(t, slices, scale);
-
+                                dstSlices.inverse(t, 2 * slices, scale);
+                                dstSlices.inverse(t, 3 * slices, scale);
                                 for (int s = 0; s < slices; s++) {
-                                    a[s][r][0] = t[ s];
-                                    a[s][r][1] = t[ slices + s];
+                                    idx2 = slices + s;
+                                    a[s][r][c] = t[s];
+                                    a[s][r][c + 1] = t[idx2];
+                                    a[s][r][c + 2] = t[idx2 + slices];
+                                    a[s][r][c + 3] = t[idx2 + 2 * slices];
                                 }
+                            }
+                        }
+                    } else if (columns == 2) {
+                        for (int r = n0; r < rows; r += nthreads) {
+                            for (int s = 0; s < slices; s++) {
+                                t[s] = a[s][r][0];
+                                t[slices + s] = a[s][r][1];
+                            }
+                            dstSlices.inverse(t, 0, scale);
+                            dstSlices.inverse(t, slices, scale);
+
+                            for (int s = 0; s < slices; s++) {
+                                a[s][r][0] = t[s];
+                                a[s][r][1] = t[slices + s];
                             }
                         }
                     }
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(DoubleDST_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }

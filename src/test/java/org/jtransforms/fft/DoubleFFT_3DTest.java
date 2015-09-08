@@ -29,7 +29,8 @@ package org.jtransforms.fft;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,21 +38,23 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
- * 
+ *
  * This is a test of the class {@link DoubleFFT_3D}. In this test, a very crude
  * 3d FFT method is implemented (see {@link #complexForward(double[][][])}),
  * assuming that {@link DoubleFFT_1D} and {@link DoubleFFT_2D} have been fully
  * tested and validated. This crude (unoptimized) method is then used to
  * establish <em>expected</em> values of <em>direct</em> Fourier transforms.
  * </p>
- * 
+ *  
  * For <em>inverse</em> Fourier transforms, the test assumes that the
  * corresponding <em>direct</em> Fourier transform has been tested and
  * validated.
  * </p>
- * 
+ *  
  * In all cases, the test consists in creating a random array of data, and
  * verifying that expected and actual values of its Fourier transform coincide
  * within a specified accuracy.
@@ -74,7 +77,7 @@ public class DoubleFFT_3DTest
      */
     public static final int SEED = 20110625;
 
-    private static final double EPS = Math.pow(10, -9);
+    private static final double EPS = pow(10, -9);
 
     @Parameters
     public static Collection<Object[]> getParameters()
@@ -157,12 +160,13 @@ public class DoubleFFT_3DTest
         this.numSlices = numSlices;
         this.numRows = numRows;
         this.numCols = numColumns;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.fft = new DoubleFFT_3D(numSlices, numRows, numColumns);
         this.xfft = new DoubleFFT_1D(numSlices);
         this.sfft = new DoubleFFT_2D(numRows, numColumns);
         this.random = new Random(seed);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
-        ConcurrencyUtils.setThreadsBeginN_3D(4);
+        CommonUtils.setThreadsBeginN_3D(4);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
 
@@ -231,9 +235,9 @@ public class DoubleFFT_3DTest
     @Test
     public void testComplexForwardLarge()
     {
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * numSlices * numRows * numCols, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * numSlices * numRows * numCols);
         final double[][][] expected0 = new double[numSlices][numRows][2 * numCols];
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * numSlices * numRows * numCols, false);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * numSlices * numRows * numCols);
         for (int s = 0; s < numSlices; s++) {
             for (int r = 0; r < numRows; r++) {
                 for (int c = 0; c < 2 * numCols; c++) {
@@ -307,8 +311,8 @@ public class DoubleFFT_3DTest
     @Test
     public void testComplexInverseScaledLarge()
     {
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * numSlices * numRows * numCols, false);
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * numSlices * numRows * numCols, false);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * numSlices * numRows * numCols);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * numSlices * numRows * numCols);
         for (int i = 0; i < actual.length(); i++) {
             final double rnd = random.nextDouble();
             actual.setDouble(i, rnd);
@@ -375,8 +379,8 @@ public class DoubleFFT_3DTest
     @Test
     public void testComplexInverseUnscaledLarge()
     {
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * numSlices * numRows * numCols, false);
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * numSlices * numRows * numCols, false);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * numSlices * numRows * numCols);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * numSlices * numRows * numCols);
         for (int i = 0; i < actual.length(); i++) {
             final double rnd = random.nextDouble();
             actual.setDouble(i, rnd);
@@ -560,13 +564,13 @@ public class DoubleFFT_3DTest
     @Test
     public void testRealForward1dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numSlices)) {
+        if (!CommonUtils.isPowerOf2(numSlices)) {
             return;
         }
         int index;
@@ -726,18 +730,18 @@ public class DoubleFFT_3DTest
     @Test
     public void testRealForwardLarge()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numSlices)) {
+        if (!CommonUtils.isPowerOf2(numSlices)) {
             return;
         }
         int index;
-        final DoubleLargeArray actual = new DoubleLargeArray(numSlices * numRows * 2 * numCols, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(numSlices * numRows * 2 * numCols, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(numSlices * numRows * 2 * numCols);
+        final DoubleLargeArray expected = new DoubleLargeArray(numSlices * numRows * 2 * numCols);
         for (int s = 0; s < numSlices; s++) {
             for (int r = 0; r < numRows; r++) {
                 for (int c = 0; c < numCols; c++) {
@@ -829,13 +833,13 @@ public class DoubleFFT_3DTest
     @Test
     public void testRealForward3dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numSlices)) {
+        if (!CommonUtils.isPowerOf2(numSlices)) {
             return;
         }
         final double[][][] actual = new double[numSlices][numRows][2 * numCols];
@@ -863,13 +867,13 @@ public class DoubleFFT_3DTest
     @Test
     public void testRealInverseScaled1dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numSlices)) {
+        if (!CommonUtils.isPowerOf2(numSlices)) {
             return;
         }
         final double[] actual = new double[numRows * numCols * numSlices];
@@ -892,17 +896,17 @@ public class DoubleFFT_3DTest
     @Test
     public void testRealInverseScaledLarge()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numSlices)) {
+        if (!CommonUtils.isPowerOf2(numSlices)) {
             return;
         }
-        final DoubleLargeArray actual = new DoubleLargeArray(numRows * numCols * numSlices, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(actual.length(), false);
+        final DoubleLargeArray actual = new DoubleLargeArray(numRows * numCols * numSlices);
+        final DoubleLargeArray expected = new DoubleLargeArray(actual.length());
         for (int i = 0; i < actual.length(); i++) {
             final double rnd = random.nextDouble();
             actual.setDouble(i, rnd);
@@ -921,13 +925,13 @@ public class DoubleFFT_3DTest
     @Test
     public void testRealInverseScaled3dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numSlices)) {
+        if (!CommonUtils.isPowerOf2(numSlices)) {
             return;
         }
         final double[][][] actual = new double[numSlices][numRows][numCols];
@@ -974,8 +978,8 @@ public class DoubleFFT_3DTest
     public void testRealForwardFullLarge()
     {
         final int n = numSlices * numRows * numCols;
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * n, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * n, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * n);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * n);
         for (int index = 0; index < n; index++) {
             final double rnd = random.nextDouble();
             actual.setDouble(index, rnd);
@@ -1039,8 +1043,8 @@ public class DoubleFFT_3DTest
     public void testRealInverseFullScaledLarge()
     {
         final int n = numSlices * numRows * numCols;
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * n, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * n, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * n);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * n);
         for (int index = 0; index < n; index++) {
             final double rnd = random.nextDouble();
             actual.setDouble(index, rnd);

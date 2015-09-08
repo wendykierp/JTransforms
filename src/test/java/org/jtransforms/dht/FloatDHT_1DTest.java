@@ -29,7 +29,8 @@ package org.jtransforms.dht;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,6 +38,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * This is a series of JUnit tests for the {@link FloatDHT_1D}.
@@ -44,7 +47,8 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
  * @author Piotr Wendykier
  */
 @RunWith(value = Parameterized.class)
-public class FloatDHT_1DTest {
+public class FloatDHT_1DTest
+{
 
     /**
      * Base message of all exceptions.
@@ -56,13 +60,14 @@ public class FloatDHT_1DTest {
      */
     public static final int SEED = 20110602;
 
-    private static final double EPS = Math.pow(10, -5);
+    private static final double EPS = pow(10, -5);
 
     @Parameters
-    public static Collection<Object[]> getParameters() {
+    public static Collection<Object[]> getParameters()
+    {
         final int[] size = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 32,
-            64, 100, 120, 128, 256, 310, 512, 1024, 1056, 2048, 8192,
-            10158, 16384, 32768, 65530, 65536, 131072};
+                            64, 100, 120, 128, 256, 310, 512, 1024, 1056, 2048, 8192,
+                            10158, 16384, 32768, 65530, 65536, 131072};
 
         final ArrayList<Object[]> parameters = new ArrayList<Object[]>();
         for (int i = 0; i < size.length; i++) {
@@ -96,16 +101,18 @@ public class FloatDHT_1DTest {
     /**
      * Creates a new instance of this class.
      *
-     * @param n the size of the DHT to be tested
+     * @param n          the size of the DHT to be tested
      * @param numThreads the number of threads
-     * @param seed the seed of the random generator
+     * @param seed       the seed of the random generator
      */
-    public FloatDHT_1DTest(final int n, final int numThreads, final long seed) {
+    public FloatDHT_1DTest(final int n, final int numThreads, final long seed)
+    {
         this.n = n;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.dht = new FloatDHT_1D(n);
         this.random = new Random(seed);
-        ConcurrencyUtils.setThreadsBeginN_1D_FFT_2Threads(1024);
-        ConcurrencyUtils.setThreadsBeginN_1D_FFT_4Threads(1024);
+        CommonUtils.setThreadsBeginN_1D_FFT_2Threads(1024);
+        CommonUtils.setThreadsBeginN_1D_FFT_4Threads(1024);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
@@ -116,7 +123,8 @@ public class FloatDHT_1DTest {
      * set to <code>true</code>.
      */
     @Test
-    public void testScaled() {
+    public void testScaled()
+    {
         final float[] actual = new float[n];
         final float[] expected = new float[n];
         for (int i = 0; i < n; i++) {
@@ -135,10 +143,10 @@ public class FloatDHT_1DTest {
      * parameter set to <code>true</code>.
      */
     @Test
-    public void testScaledLarge() {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final FloatLargeArray actual = new FloatLargeArray(n, false);
-        final FloatLargeArray expected = new FloatLargeArray(n, false);
+    public void testScaledLarge()
+    {
+        final FloatLargeArray actual = new FloatLargeArray(n);
+        final FloatLargeArray expected = new FloatLargeArray(n);
         for (int i = 0; i < n; i++) {
             actual.setFloat(i, 2.f * random.nextFloat() - 1.f);
             expected.setFloat(i, actual.getFloat(i));

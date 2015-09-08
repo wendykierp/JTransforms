@@ -29,7 +29,8 @@ package org.jtransforms.dct;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,6 +38,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * This is a series of JUnit tests for the {@link FloatDCT_3D}.
@@ -57,7 +60,7 @@ public class FloatDCT_3DTest
      */
     public static final int SEED = 20110602;
 
-    private static final double EPS = Math.pow(10, -5);
+    private static final double EPS = pow(10, -5);
 
     @Parameters
     public static Collection<Object[]> getParameters()
@@ -125,15 +128,16 @@ public class FloatDCT_3DTest
      *                   the seed of the random generator
      */
     public FloatDCT_3DTest(final int numSlices, final int numRows,
-                            final int numColumns, final int numThreads, final long seed)
+                           final int numColumns, final int numThreads, final long seed)
     {
         this.numSlices = numSlices;
         this.numRows = numRows;
         this.numCols = numColumns;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.dct = new FloatDCT_3D(numSlices, numRows, numCols);
         this.random = new Random(seed);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
-        ConcurrencyUtils.setThreadsBeginN_3D(1);
+        CommonUtils.setThreadsBeginN_3D(1);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
 
@@ -170,8 +174,8 @@ public class FloatDCT_3DTest
     @Test
     public void testScaledLarge()
     {
-        final FloatLargeArray actual = new FloatLargeArray(numSlices * numRows * numCols, false);
-        final FloatLargeArray expected = new FloatLargeArray(numSlices * numRows * numCols, false);
+        final FloatLargeArray actual = new FloatLargeArray(numSlices * numRows * numCols);
+        final FloatLargeArray expected = new FloatLargeArray(numSlices * numRows * numCols);
         for (int s = 0; s < numSlices; s++) {
             for (int r = 0; r < numRows; r++) {
                 for (int c = 0; c < numCols; c++) {
@@ -186,7 +190,7 @@ public class FloatDCT_3DTest
         double rmse = IOUtils.computeRMSE(actual, expected);
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numSlices, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
-    
+
     /**
      * This is a test of {@link FloatDCT_3D#forward(float[][][], boolean)},
      * and {@link FloatDCT_3D#inverse(float[][][], boolean)}

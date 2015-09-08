@@ -29,15 +29,19 @@ package org.jtransforms.dht;
 import java.util.concurrent.Future;
 import org.jtransforms.fft.FloatFFT_1D;
 import org.jtransforms.utils.CommonUtils;
-import org.jtransforms.utils.ConcurrencyUtils;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
-import pl.edu.icm.jlargearrays.Utilities;
+import pl.edu.icm.jlargearrays.LargeArray;
+import pl.edu.icm.jlargearrays.LargeArrayUtils;
 
 /**
  * Computes 1D Discrete Hartley Transform (DHT) of real, single precision data.
  * The size of the data can be an arbitrary number. It uses FFT algorithm. This
  * is a parallel implementation optimized for SMP systems.
- * 
+ *  
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
  */
 public class FloatDHT_1D
@@ -50,22 +54,21 @@ public class FloatDHT_1D
 
     /**
      * Creates new instance of FloatDHT_1D.
-     * 
+     *  
      * @param n
-     *                       size of data
-
+     *          size of data
      */
     public FloatDHT_1D(long n)
     {
         this.n = (int) n;
         this.nl = n;
-        this.useLargeArrays = n >= ConcurrencyUtils.getLargeArraysBeginN();
+        this.useLargeArrays = (CommonUtils.isUseLargeArrays() || n > LargeArray.getMaxSizeOf32bitArray());
         fft = new FloatFFT_1D(n);
     }
 
     /**
      * Computes 1D real, forward DHT leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a
      *          data to transform
      */
@@ -76,7 +79,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, forward DHT leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a
      *          data to transform
      */
@@ -87,7 +90,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, forward DHT leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a
      *             data to transform
      * @param offa
@@ -105,7 +108,7 @@ public class FloatDHT_1D
             System.arraycopy(a, offa, b, 0, n);
             int nd2 = n / 2;
             int nthreads = ConcurrencyUtils.getNumberOfThreads();
-            if ((nthreads > 1) && (nd2 > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+            if ((nthreads > 1) && (nd2 > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                 nthreads = 2;
                 final int k1 = nd2 / nthreads;
                 Future<?>[] futures = new Future[nthreads];
@@ -128,7 +131,13 @@ public class FloatDHT_1D
 
                     });
                 }
-                ConcurrencyUtils.waitForCompletion(futures);
+                try {
+                    ConcurrencyUtils.waitForCompletion(futures);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(FloatDHT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    Logger.getLogger(FloatDHT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                }
             } else {
                 int idx1, idx2;
                 for (int i = 1; i < nd2; i++) {
@@ -149,7 +158,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, forward DHT leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a
      *             data to transform
      * @param offa
@@ -160,7 +169,7 @@ public class FloatDHT_1D
         if (nl == 1)
             return;
         if (!useLargeArrays) {
-            if (a.getData() != null && offa < Integer.MAX_VALUE) {
+            if (!a.isLarge() && !a.isConstant() && offa < Integer.MAX_VALUE) {
                 forward(a.getData(), (int) offa);
             } else {
                 throw new IllegalArgumentException("The data array is too big.");
@@ -168,10 +177,10 @@ public class FloatDHT_1D
         } else {
             fft.realForward(a, offa);
             final FloatLargeArray b = new FloatLargeArray(nl, false);
-            Utilities.arraycopy(a, offa, b, 0, nl);
+            LargeArrayUtils.arraycopy(a, offa, b, 0, nl);
             long nd2 = nl / 2;
             int nthreads = ConcurrencyUtils.getNumberOfThreads();
-            if ((nthreads > 1) && (nd2 > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+            if ((nthreads > 1) && (nd2 > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                 nthreads = 2;
                 final long k1 = nd2 / nthreads;
                 Future<?>[] futures = new Future[nthreads];
@@ -194,7 +203,13 @@ public class FloatDHT_1D
 
                     });
                 }
-                ConcurrencyUtils.waitForCompletion(futures);
+                try {
+                    ConcurrencyUtils.waitForCompletion(futures);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(FloatDHT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    Logger.getLogger(FloatDHT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                }
             } else {
                 long idx1, idx2;
                 for (long i = 1; i < nd2; i++) {
@@ -215,7 +230,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, inverse DHT leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a
      *              data to transform
      * @param scale
@@ -228,7 +243,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, inverse DHT leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a
      *              data to transform
      * @param scale
@@ -241,7 +256,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, inverse DHT leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a
      *              data to transform
      * @param offa
@@ -265,7 +280,7 @@ public class FloatDHT_1D
 
     /**
      * Computes 1D real, inverse DHT leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a
      *              data to transform
      * @param offa
@@ -278,7 +293,7 @@ public class FloatDHT_1D
         if (n == 1)
             return;
         if (!useLargeArrays) {
-            if (a.getData() != null && offa < Integer.MAX_VALUE) {
+            if (!a.isLarge() && !a.isConstant() && offa < Integer.MAX_VALUE) {
                 inverse(a.getData(), (int) offa, scale);
             } else {
                 throw new IllegalArgumentException("The data array is too big.");

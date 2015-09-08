@@ -26,13 +26,18 @@
  * ***** END LICENSE BLOCK ***** */
 package org.jtransforms.dct;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.jtransforms.fft.DoubleFFT_1D;
 import org.jtransforms.utils.CommonUtils;
-import org.jtransforms.utils.ConcurrencyUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
 import pl.edu.icm.jlargearrays.LongLargeArray;
-import pl.edu.icm.jlargearrays.Utilities;
+import pl.edu.icm.jlargearrays.LargeArrayUtils;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * Computes 1D Discrete Cosine Transform (DCT) of double precision data. The
@@ -41,7 +46,7 @@ import pl.edu.icm.jlargearrays.Utilities;
  * <br>
  * Part of the code is derived from General Purpose FFT Package written by
  * Takuya Ooura (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html)
- * 
+ *  
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
  */
 public class DoubleDCT_1D
@@ -77,7 +82,7 @@ public class DoubleDCT_1D
 
     /**
      * Creates new instance of DoubleDCT_1D.
-     * 
+     *  
      * @param n size of data
      */
     public DoubleDCT_1D(long n)
@@ -85,16 +90,17 @@ public class DoubleDCT_1D
         if (n < 1) {
             throw new IllegalArgumentException("n must be greater than 0");
         }
-        this.useLargeArrays = n >= ConcurrencyUtils.getLargeArraysBeginN();
+        this.useLargeArrays = (CommonUtils.isUseLargeArrays() || n > LargeArray.getMaxSizeOf32bitArray());
+        this.n = (int) n;
+        this.nl = n;
 
         if (!useLargeArrays) {
             if (n > (1 << 28)) {
                 throw new IllegalArgumentException("n must be smaller or equal to " + (1 << 28) + " when useLargeArrays argument is set to false");
             }
-            this.n = (int) n;
-            if (ConcurrencyUtils.isPowerOf2(n)) {
+            if (CommonUtils.isPowerOf2(n)) {
                 this.isPowerOfTwo = true;
-                this.ip = new int[(int) Math.ceil(2 + (1 << (int) (Math.log(n / 2 + 0.5) / Math.log(2)) / 2))];
+                this.ip = new int[(int) ceil(2 + (1 << (int) (log(n / 2 + 0.5) / log(2)) / 2))];
                 this.w = new double[this.n * 5 / 4];
                 nw = ip[0];
                 if (n > (nw << 2)) {
@@ -110,33 +116,30 @@ public class DoubleDCT_1D
                 this.w = makect(this.n);
                 fft = new DoubleFFT_1D(2 * n);
             }
-        } else {
-            this.nl = n;
-            if (ConcurrencyUtils.isPowerOf2(n)) {
-                this.isPowerOfTwo = true;
-                this.ipl = new LongLargeArray((long) Math.ceil(2 + (1l << (long) (Math.log(n / 2 + 0.5) / Math.log(2)) / 2)), false);
-                this.wl = new DoubleLargeArray(this.nl * 5l / 4l, false);
-                nwl = ipl.getLong(0);
-                if (n > (nwl << 2l)) {
-                    nwl = this.nl >> 2l;
-                    CommonUtils.makewt(nwl, ipl, wl);
-                }
-                ncl = ipl.getLong(1);
-                if (n > ncl) {
-                    ncl = this.nl;
-                    CommonUtils.makect(ncl, wl, nwl, ipl);
-                }
-            } else {
-                this.wl = makect(n);
-                fft = new DoubleFFT_1D(2 * n);
+        } else if (CommonUtils.isPowerOf2(n)) {
+            this.isPowerOfTwo = true;
+            this.ipl = new LongLargeArray((long) ceil(2 + (1l << (long) (log(n / 2 + 0.5) / log(2)) / 2)));
+            this.wl = new DoubleLargeArray(this.nl * 5l / 4l);
+            nwl = ipl.getLong(0);
+            if (n > (nwl << 2l)) {
+                nwl = this.nl >> 2l;
+                CommonUtils.makewt(nwl, ipl, wl);
             }
+            ncl = ipl.getLong(1);
+            if (n > ncl) {
+                ncl = this.nl;
+                CommonUtils.makect(ncl, wl, nwl, ipl);
+            }
+        } else {
+            this.wl = makect(n);
+            fft = new DoubleFFT_1D(2 * n);
         }
 
     }
 
     /**
      * Computes 1D forward DCT (DCT-II) leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a     data to transform
      * @param scale if true then scaling is performed
      */
@@ -147,7 +150,7 @@ public class DoubleDCT_1D
 
     /**
      * Computes 1D forward DCT (DCT-II) leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a     data to transform
      * @param scale if true then scaling is performed
      */
@@ -158,7 +161,7 @@ public class DoubleDCT_1D
 
     /**
      * Computes 1D forward DCT (DCT-II) leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a     data to transform
      * @param offa  index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
@@ -170,74 +173,78 @@ public class DoubleDCT_1D
         }
         if (useLargeArrays) {
             forward(new DoubleLargeArray(a), offa, scale);
+        } else if (isPowerOfTwo) {
+            double xr = a[offa + n - 1];
+            for (int j = n - 2; j >= 2; j -= 2) {
+                a[offa + j + 1] = a[offa + j] - a[offa + j - 1];
+                a[offa + j] += a[offa + j - 1];
+            }
+            a[offa + 1] = a[offa] - xr;
+            a[offa] += xr;
+            if (n > 4) {
+                rftbsub(n, a, offa, nc, w, nw);
+                CommonUtils.cftbsub(n, a, offa, ip, nw, w);
+            } else if (n == 4) {
+                CommonUtils.cftbsub(n, a, offa, ip, nw, w);
+            }
+            CommonUtils.dctsub(n, a, offa, nc, w, nw);
+            if (scale) {
+                CommonUtils.scale(n, sqrt(2.0 / n), a, offa, false);
+                a[offa] = a[offa] / sqrt(2.0);
+            }
         } else {
-            if (isPowerOfTwo) {
-                double xr = a[offa + n - 1];
-                for (int j = n - 2; j >= 2; j -= 2) {
-                    a[offa + j + 1] = a[offa + j] - a[offa + j - 1];
-                    a[offa + j] += a[offa + j - 1];
+            final int twon = 2 * n;
+            final double[] t = new double[twon];
+            System.arraycopy(a, offa, t, 0, n);
+            int nthreads = ConcurrencyUtils.getNumberOfThreads();
+            for (int i = n; i < twon; i++) {
+                t[i] = t[twon - i - 1];
+            }
+            fft.realForward(t);
+            if ((nthreads > 1) && (n > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                nthreads = 2;
+                final int k = n / nthreads;
+                Future<?>[] futures = new Future[nthreads];
+                for (int j = 0; j < nthreads; j++) {
+                    final int firstIdx = j * k;
+                    final int lastIdx = (j == (nthreads - 1)) ? n : firstIdx + k;
+                    futures[j] = ConcurrencyUtils.submit(new Runnable()
+                    {
+                        public void run()
+                        {
+                            for (int i = firstIdx; i < lastIdx; i++) {
+                                int twoi = 2 * i;
+                                int idx = offa + i;
+                                a[idx] = w[twoi] * t[twoi] - w[twoi + 1] * t[twoi + 1];
+                            }
+
+                        }
+                    });
                 }
-                a[offa + 1] = a[offa] - xr;
-                a[offa] += xr;
-                if (n > 4) {
-                    rftbsub(n, a, offa, nc, w, nw);
-                    CommonUtils.cftbsub(n, a, offa, ip, nw, w);
-                } else if (n == 4) {
-                    CommonUtils.cftbsub(n, a, offa, ip, nw, w);
-                }
-                CommonUtils.dctsub(n, a, offa, nc, w, nw);
-                if (scale) {
-                    CommonUtils.scale(n, Math.sqrt(2.0 / n), a, offa, false);
-                    a[offa] = a[offa] / Math.sqrt(2.0);
+                try {
+                    ConcurrencyUtils.waitForCompletion(futures);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(DoubleDCT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    Logger.getLogger(DoubleDCT_1D.class.getName()).log(Level.SEVERE, null, ex);
                 }
             } else {
-                final int twon = 2 * n;
-                final double[] t = new double[twon];
-                System.arraycopy(a, offa, t, 0, n);
-                int nthreads = ConcurrencyUtils.getNumberOfThreads();
-                for (int i = n; i < twon; i++) {
-                    t[i] = t[twon - i - 1];
+                for (int i = 0; i < n; i++) {
+                    int twoi = 2 * i;
+                    int idx = offa + i;
+                    a[idx] = w[twoi] * t[twoi] - w[twoi + 1] * t[twoi + 1];
                 }
-                fft.realForward(t);
-                if ((nthreads > 1) && (n > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
-                    nthreads = 2;
-                    final int k = n / nthreads;
-                    Future<?>[] futures = new Future[nthreads];
-                    for (int j = 0; j < nthreads; j++) {
-                        final int firstIdx = j * k;
-                        final int lastIdx = (j == (nthreads - 1)) ? n : firstIdx + k;
-                        futures[j] = ConcurrencyUtils.submit(new Runnable()
-                        {
-                            public void run()
-                            {
-                                for (int i = firstIdx; i < lastIdx; i++) {
-                                    int twoi = 2 * i;
-                                    int idx = offa + i;
-                                    a[idx] = w[twoi] * t[twoi] - w[twoi + 1] * t[twoi + 1];
-                                }
-
-                            }
-                        });
-                    }
-                    ConcurrencyUtils.waitForCompletion(futures);
-                } else {
-                    for (int i = 0; i < n; i++) {
-                        int twoi = 2 * i;
-                        int idx = offa + i;
-                        a[idx] = w[twoi] * t[twoi] - w[twoi + 1] * t[twoi + 1];
-                    }
-                }
-                if (scale) {
-                    CommonUtils.scale(n, 1 / Math.sqrt(twon), a, offa, false);
-                    a[offa] = a[offa] / Math.sqrt(2.0);
-                }
+            }
+            if (scale) {
+                CommonUtils.scale(n, 1 / sqrt(twon), a, offa, false);
+                a[offa] = a[offa] / sqrt(2.0);
             }
         }
     }
 
     /**
      * Computes 1D forward DCT (DCT-II) leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a     data to transform
      * @param offa  index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
@@ -248,79 +255,83 @@ public class DoubleDCT_1D
             return;
         }
         if (!useLargeArrays) {
-            if (a.getData() != null && offa < Integer.MAX_VALUE) {
+            if (!a.isLarge() && !a.isConstant() && offa < Integer.MAX_VALUE) {
                 forward(a.getData(), (int) offa, scale);
             } else {
                 throw new IllegalArgumentException("The data array is too big.");
             }
+        } else if (isPowerOfTwo) {
+            double xr = a.getDouble(offa + nl - 1);
+            for (long j = nl - 2; j >= 2; j -= 2) {
+                a.setDouble(offa + j + 1, a.getDouble(offa + j) - a.getDouble(offa + j - 1));
+                a.setDouble(offa + j, a.getDouble(offa + j) + a.getDouble(offa + j - 1));
+            }
+            a.setDouble(offa + 1, a.getDouble(offa) - xr);
+            a.setDouble(offa, a.getDouble(offa) + xr);
+            if (nl > 4) {
+                rftbsub(nl, a, offa, ncl, wl, nwl);
+                CommonUtils.cftbsub(nl, a, offa, ipl, nwl, wl);
+            } else if (nl == 4) {
+                CommonUtils.cftbsub(nl, a, offa, ipl, nwl, wl);
+            }
+            CommonUtils.dctsub(nl, a, offa, ncl, wl, nwl);
+            if (scale) {
+                CommonUtils.scale(nl, sqrt(2.0 / nl), a, offa, false);
+                a.setDouble(offa, a.getDouble(offa) / sqrt(2.0));
+            }
         } else {
-            if (isPowerOfTwo) {
-                double xr = a.getDouble(offa + nl - 1);
-                for (long j = nl - 2; j >= 2; j -= 2) {
-                    a.setDouble(offa + j + 1, a.getDouble(offa + j) - a.getDouble(offa + j - 1));
-                    a.setDouble(offa + j, a.getDouble(offa + j) + a.getDouble(offa + j - 1));
+            final long twon = 2 * nl;
+            final DoubleLargeArray t = new DoubleLargeArray(twon);
+            LargeArrayUtils.arraycopy(a, offa, t, 0, nl);
+            int nthreads = ConcurrencyUtils.getNumberOfThreads();
+            for (long i = nl; i < twon; i++) {
+                t.setDouble(i, t.getDouble(twon - i - 1));
+            }
+            fft.realForward(t);
+            if ((nthreads > 1) && (nl > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                nthreads = 2;
+                final long k = nl / nthreads;
+                Future<?>[] futures = new Future[nthreads];
+                for (int j = 0; j < nthreads; j++) {
+                    final long firstIdx = j * k;
+                    final long lastIdx = (j == (nthreads - 1)) ? nl : firstIdx + k;
+                    futures[j] = ConcurrencyUtils.submit(new Runnable()
+                    {
+                        public void run()
+                        {
+                            for (long i = firstIdx; i < lastIdx; i++) {
+                                long twoi = 2 * i;
+                                long idx = offa + i;
+                                a.setDouble(idx, wl.getDouble(twoi) * t.getDouble(twoi) - wl.getDouble(twoi + 1) * t.getDouble(twoi + 1));
+                            }
+
+                        }
+                    });
                 }
-                a.setDouble(offa + 1, a.getDouble(offa) - xr);
-                a.setDouble(offa, a.getDouble(offa) + xr);
-                if (nl > 4) {
-                    rftbsub(nl, a, offa, ncl, wl, nwl);
-                    CommonUtils.cftbsub(nl, a, offa, ipl, nwl, wl);
-                } else if (nl == 4) {
-                    CommonUtils.cftbsub(nl, a, offa, ipl, nwl, wl);
-                }
-                CommonUtils.dctsub(nl, a, offa, ncl, wl, nwl);
-                if (scale) {
-                    CommonUtils.scale(nl, Math.sqrt(2.0 / nl), a, offa, false);
-                    a.setDouble(offa, a.getDouble(offa) / Math.sqrt(2.0));
+                try {
+                    ConcurrencyUtils.waitForCompletion(futures);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(DoubleDCT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    Logger.getLogger(DoubleDCT_1D.class.getName()).log(Level.SEVERE, null, ex);
                 }
             } else {
-                final long twon = 2 * nl;
-                final DoubleLargeArray t = new DoubleLargeArray(twon, false);
-                Utilities.arraycopy(a, offa, t, 0, nl);
-                int nthreads = ConcurrencyUtils.getNumberOfThreads();
-                for (long i = nl; i < twon; i++) {
-                    t.setDouble(i, t.getDouble(twon - i - 1));
+                for (long i = 0; i < nl; i++) {
+                    long twoi = 2 * i;
+                    long idx = offa + i;
+                    a.setDouble(idx, wl.getDouble(twoi) * t.getDouble(twoi) - wl.getDouble(twoi + 1) * t.getDouble(twoi + 1));
                 }
-                fft.realForward(t);
-                if ((nthreads > 1) && (nl > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
-                    nthreads = 2;
-                    final long k = nl / nthreads;
-                    Future<?>[] futures = new Future[nthreads];
-                    for (int j = 0; j < nthreads; j++) {
-                        final long firstIdx = j * k;
-                        final long lastIdx = (j == (nthreads - 1)) ? nl : firstIdx + k;
-                        futures[j] = ConcurrencyUtils.submit(new Runnable()
-                        {
-                            public void run()
-                            {
-                                for (long i = firstIdx; i < lastIdx; i++) {
-                                    long twoi = 2 * i;
-                                    long idx = offa + i;
-                                    a.setDouble(idx, wl.getDouble(twoi) * t.getDouble(twoi) - wl.getDouble(twoi + 1) * t.getDouble(twoi + 1));
-                                }
-
-                            }
-                        });
-                    }
-                    ConcurrencyUtils.waitForCompletion(futures);
-                } else {
-                    for (long i = 0; i < nl; i++) {
-                        long twoi = 2 * i;
-                        long idx = offa + i;
-                        a.setDouble(idx, wl.getDouble(twoi) * t.getDouble(twoi) - wl.getDouble(twoi + 1) * t.getDouble(twoi + 1));
-                    }
-                }
-                if (scale) {
-                    CommonUtils.scale(nl, 1 / Math.sqrt(twon), a, offa, false);
-                    a.setDouble(offa, a.getDouble(offa) / Math.sqrt(2.0));
-                }
+            }
+            if (scale) {
+                CommonUtils.scale(nl, 1 / sqrt(twon), a, offa, false);
+                a.setDouble(offa, a.getDouble(offa) / sqrt(2.0));
             }
         }
     }
 
     /**
      * Computes 1D inverse DCT (DCT-III) leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a     data to transform
      * @param scale if true then scaling is performed
      */
@@ -331,7 +342,7 @@ public class DoubleDCT_1D
 
     /**
      * Computes 1D inverse DCT (DCT-III) leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a     data to transform
      * @param scale if true then scaling is performed
      */
@@ -342,7 +353,7 @@ public class DoubleDCT_1D
 
     /**
      * Computes 1D inverse DCT (DCT-III) leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a     data to transform
      * @param offa  index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
@@ -354,73 +365,77 @@ public class DoubleDCT_1D
         }
         if (useLargeArrays) {
             inverse(new DoubleLargeArray(a), offa, scale);
-        } else {
-            if (isPowerOfTwo) {
-                double xr;
-                if (scale) {
-                    CommonUtils.scale(n, Math.sqrt(2.0 / n), a, offa, false);
-                    a[offa] = a[offa] / Math.sqrt(2.0);
-                }
-                CommonUtils.dctsub(n, a, offa, nc, w, nw);
-                if (n > 4) {
-                    CommonUtils.cftfsub(n, a, offa, ip, nw, w);
-                    rftfsub(n, a, offa, nc, w, nw);
-                } else if (n == 4) {
-                    CommonUtils.cftfsub(n, a, offa, ip, nw, w);
-                }
-                xr = a[offa] - a[offa + 1];
-                a[offa] += a[offa + 1];
-                for (int j = 2; j < n; j += 2) {
-                    a[offa + j - 1] = a[offa + j] - a[offa + j + 1];
-                    a[offa + j] += a[offa + j + 1];
-                }
-                a[offa + n - 1] = xr;
-            } else {
-                final int twon = 2 * n;
-                if (scale) {
-                    CommonUtils.scale(n, Math.sqrt(twon), a, offa, false);
-                    a[offa] = a[offa] * Math.sqrt(2.0);
-                }
-                final double[] t = new double[twon];
-                int nthreads = ConcurrencyUtils.getNumberOfThreads();
-                if ((nthreads > 1) && (n > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
-                    nthreads = 2;
-                    final int k = n / nthreads;
-                    Future<?>[] futures = new Future[nthreads];
-                    for (int j = 0; j < nthreads; j++) {
-                        final int firstIdx = j * k;
-                        final int lastIdx = (j == (nthreads - 1)) ? n : firstIdx + k;
-                        futures[j] = ConcurrencyUtils.submit(new Runnable()
-                        {
-                            public void run()
-                            {
-                                for (int i = firstIdx; i < lastIdx; i++) {
-                                    int twoi = 2 * i;
-                                    double elem = a[offa + i];
-                                    t[twoi] = w[twoi] * elem;
-                                    t[twoi + 1] = -w[twoi + 1] * elem;
-                                }
-                            }
-                        });
-                    }
-                    ConcurrencyUtils.waitForCompletion(futures);
-                } else {
-                    for (int i = 0; i < n; i++) {
-                        int twoi = 2 * i;
-                        double elem = a[offa + i];
-                        t[twoi] = w[twoi] * elem;
-                        t[twoi + 1] = -w[twoi + 1] * elem;
-                    }
-                }
-                fft.realInverse(t, true);
-                System.arraycopy(t, 0, a, offa, n);
+        } else if (isPowerOfTwo) {
+            double xr;
+            if (scale) {
+                CommonUtils.scale(n, sqrt(2.0 / n), a, offa, false);
+                a[offa] = a[offa] / sqrt(2.0);
             }
+            CommonUtils.dctsub(n, a, offa, nc, w, nw);
+            if (n > 4) {
+                CommonUtils.cftfsub(n, a, offa, ip, nw, w);
+                rftfsub(n, a, offa, nc, w, nw);
+            } else if (n == 4) {
+                CommonUtils.cftfsub(n, a, offa, ip, nw, w);
+            }
+            xr = a[offa] - a[offa + 1];
+            a[offa] += a[offa + 1];
+            for (int j = 2; j < n; j += 2) {
+                a[offa + j - 1] = a[offa + j] - a[offa + j + 1];
+                a[offa + j] += a[offa + j + 1];
+            }
+            a[offa + n - 1] = xr;
+        } else {
+            final int twon = 2 * n;
+            if (scale) {
+                CommonUtils.scale(n, sqrt(twon), a, offa, false);
+                a[offa] = a[offa] * sqrt(2.0);
+            }
+            final double[] t = new double[twon];
+            int nthreads = ConcurrencyUtils.getNumberOfThreads();
+            if ((nthreads > 1) && (n > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                nthreads = 2;
+                final int k = n / nthreads;
+                Future<?>[] futures = new Future[nthreads];
+                for (int j = 0; j < nthreads; j++) {
+                    final int firstIdx = j * k;
+                    final int lastIdx = (j == (nthreads - 1)) ? n : firstIdx + k;
+                    futures[j] = ConcurrencyUtils.submit(new Runnable()
+                    {
+                        public void run()
+                        {
+                            for (int i = firstIdx; i < lastIdx; i++) {
+                                int twoi = 2 * i;
+                                double elem = a[offa + i];
+                                t[twoi] = w[twoi] * elem;
+                                t[twoi + 1] = -w[twoi + 1] * elem;
+                            }
+                        }
+                    });
+                }
+                try {
+                    ConcurrencyUtils.waitForCompletion(futures);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(DoubleDCT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    Logger.getLogger(DoubleDCT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            } else {
+                for (int i = 0; i < n; i++) {
+                    int twoi = 2 * i;
+                    double elem = a[offa + i];
+                    t[twoi] = w[twoi] * elem;
+                    t[twoi + 1] = -w[twoi + 1] * elem;
+                }
+            }
+            fft.realInverse(t, true);
+            System.arraycopy(t, 0, a, offa, n);
         }
     }
 
     /**
      * Computes 1D inverse DCT (DCT-III) leaving the result in <code>a</code>.
-     * 
+     *  
      * @param a     data to transform
      * @param offa  index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
@@ -431,72 +446,76 @@ public class DoubleDCT_1D
             return;
         }
         if (!useLargeArrays) {
-            if (a.getData() != null && offa < Integer.MAX_VALUE) {
+            if (!a.isLarge() && !a.isConstant() && offa < Integer.MAX_VALUE) {
                 inverse(a.getData(), (int) offa, scale);
             } else {
                 throw new IllegalArgumentException("The data array is too big.");
             }
-        } else {
-            if (isPowerOfTwo) {
-                double xr;
-                if (scale) {
-                    CommonUtils.scale(nl, Math.sqrt(2.0 / nl), a, offa, false);
-                    a.setDouble(offa, a.getDouble(offa) / Math.sqrt(2.0));
-                }
-                CommonUtils.dctsub(nl, a, offa, ncl, wl, nwl);
-                if (nl > 4) {
-                    CommonUtils.cftfsub(nl, a, offa, ipl, nwl, wl);
-                    rftfsub(nl, a, offa, ncl, wl, nwl);
-                } else if (nl == 4) {
-                    CommonUtils.cftfsub(nl, a, offa, ipl, nwl, wl);
-                }
-                xr = a.getDouble(offa) - a.getDouble(offa + 1);
-                a.setDouble(offa, a.getDouble(offa) + a.getDouble(offa + 1));
-                for (long j = 2; j < nl; j += 2) {
-                    a.setDouble(offa + j - 1, a.getDouble(offa + j) - a.getDouble(offa + j + 1));
-                    a.setDouble(offa + j, a.getDouble(offa + j) + a.getDouble(offa + j + 1));
-                }
-                a.setDouble(offa + nl - 1, xr);
-            } else {
-                final long twon = 2 * nl;
-                if (scale) {
-                    CommonUtils.scale(nl, Math.sqrt(twon), a, offa, false);
-                    a.setDouble(offa, a.getDouble(offa) * Math.sqrt(2.0));
-                }
-                final DoubleLargeArray t = new DoubleLargeArray(twon, false);
-                int nthreads = ConcurrencyUtils.getNumberOfThreads();
-                if ((nthreads > 1) && (nl > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
-                    nthreads = 2;
-                    final long k = nl / nthreads;
-                    Future<?>[] futures = new Future[nthreads];
-                    for (int j = 0; j < nthreads; j++) {
-                        final long firstIdx = j * k;
-                        final long lastIdx = (j == (nthreads - 1)) ? nl : firstIdx + k;
-                        futures[j] = ConcurrencyUtils.submit(new Runnable()
-                        {
-                            public void run()
-                            {
-                                for (long i = firstIdx; i < lastIdx; i++) {
-                                    long twoi = 2 * i;
-                                    double elem = a.getDouble(offa + i);
-                                    t.setDouble(twoi, wl.getDouble(twoi) * elem);
-                                    t.setDouble(twoi + 1, -wl.getDouble(twoi + 1) * elem);
-                                }
-                            }
-                        });
-                    }
-                    ConcurrencyUtils.waitForCompletion(futures);
-                } else {
-                    for (long i = 0; i < nl; i++) {
-                        long twoi = 2 * i;
-                        double elem = a.getDouble(offa + i);
-                        t.setDouble(twoi, wl.getDouble(twoi) * elem);
-                        t.setDouble(twoi + 1, -wl.getDouble(twoi + 1) * elem);
-                    }
-                }
-                fft.realInverse(t, true);
-                Utilities.arraycopy(t, 0, a, offa, nl);
+        } else if (isPowerOfTwo) {
+            double xr;
+            if (scale) {
+                CommonUtils.scale(nl, sqrt(2.0 / nl), a, offa, false);
+                a.setDouble(offa, a.getDouble(offa) / sqrt(2.0));
             }
+            CommonUtils.dctsub(nl, a, offa, ncl, wl, nwl);
+            if (nl > 4) {
+                CommonUtils.cftfsub(nl, a, offa, ipl, nwl, wl);
+                rftfsub(nl, a, offa, ncl, wl, nwl);
+            } else if (nl == 4) {
+                CommonUtils.cftfsub(nl, a, offa, ipl, nwl, wl);
+            }
+            xr = a.getDouble(offa) - a.getDouble(offa + 1);
+            a.setDouble(offa, a.getDouble(offa) + a.getDouble(offa + 1));
+            for (long j = 2; j < nl; j += 2) {
+                a.setDouble(offa + j - 1, a.getDouble(offa + j) - a.getDouble(offa + j + 1));
+                a.setDouble(offa + j, a.getDouble(offa + j) + a.getDouble(offa + j + 1));
+            }
+            a.setDouble(offa + nl - 1, xr);
+        } else {
+            final long twon = 2 * nl;
+            if (scale) {
+                CommonUtils.scale(nl, sqrt(twon), a, offa, false);
+                a.setDouble(offa, a.getDouble(offa) * sqrt(2.0));
+            }
+            final DoubleLargeArray t = new DoubleLargeArray(twon);
+            int nthreads = ConcurrencyUtils.getNumberOfThreads();
+            if ((nthreads > 1) && (nl > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                nthreads = 2;
+                final long k = nl / nthreads;
+                Future<?>[] futures = new Future[nthreads];
+                for (int j = 0; j < nthreads; j++) {
+                    final long firstIdx = j * k;
+                    final long lastIdx = (j == (nthreads - 1)) ? nl : firstIdx + k;
+                    futures[j] = ConcurrencyUtils.submit(new Runnable()
+                    {
+                        public void run()
+                        {
+                            for (long i = firstIdx; i < lastIdx; i++) {
+                                long twoi = 2 * i;
+                                double elem = a.getDouble(offa + i);
+                                t.setDouble(twoi, wl.getDouble(twoi) * elem);
+                                t.setDouble(twoi + 1, -wl.getDouble(twoi + 1) * elem);
+                            }
+                        }
+                    });
+                }
+                try {
+                    ConcurrencyUtils.waitForCompletion(futures);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(DoubleDCT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    Logger.getLogger(DoubleDCT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            } else {
+                for (long i = 0; i < nl; i++) {
+                    long twoi = 2 * i;
+                    double elem = a.getDouble(offa + i);
+                    t.setDouble(twoi, wl.getDouble(twoi) * elem);
+                    t.setDouble(twoi + 1, -wl.getDouble(twoi + 1) * elem);
+                }
+            }
+            fft.realInverse(t, true);
+            LargeArrayUtils.arraycopy(t, 0, a, offa, nl);
         }
     }
 
@@ -512,8 +531,8 @@ public class DoubleDCT_1D
         for (int j = 1; j < n; j++) {
             idx = 2 * j;
             deltaj = delta * j;
-            c[idx] = Math.cos(deltaj);
-            c[idx + 1] = -Math.sin(deltaj);
+            c[idx] = cos(deltaj);
+            c[idx + 1] = -sin(deltaj);
         }
         return c;
     }
@@ -524,13 +543,13 @@ public class DoubleDCT_1D
         long idx;
         double delta = PI / twon;
         double deltaj;
-        DoubleLargeArray c = new DoubleLargeArray(twon, false);
+        DoubleLargeArray c = new DoubleLargeArray(twon);
         c.setDouble(0, 1);
         for (long j = 1; j < n; j++) {
             idx = 2 * j;
             deltaj = delta * j;
-            c.setDouble(idx, Math.cos(deltaj));
-            c.setDouble(idx + 1, -Math.sin(deltaj));
+            c.setDouble(idx, cos(deltaj));
+            c.setDouble(idx + 1, -sin(deltaj));
         }
         return c;
     }

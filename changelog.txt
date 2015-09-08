@@ -1,5 +1,10 @@
 JTransforms changelog
 
+3.1:    September 8, 2015
+    - Fixed unreported bugs.
+    - Added the Apache Commons Mathematics Library as a dependency. 
+    - Updated JLargeArrays dependency to version 1.5.
+
 3.0:    July 8, 2014
     - Added support for 1D arrays of size up to 2^63 (via JLargeArrays library).
     - Fixed unreported bugs.

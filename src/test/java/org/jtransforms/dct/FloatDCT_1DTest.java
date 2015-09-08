@@ -29,7 +29,8 @@ package org.jtransforms.dct;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,6 +38,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * This is a series of JUnit tests for the {@link FloatDCT_1D}.
@@ -57,7 +60,7 @@ public class FloatDCT_1DTest
      */
     public static final int SEED = 20110602;
 
-    private static final double EPS = Math.pow(10, -5);
+    private static final double EPS = pow(10, -5);
 
     @Parameters
     public static Collection<Object[]> getParameters()
@@ -108,10 +111,11 @@ public class FloatDCT_1DTest
     public FloatDCT_1DTest(final int n, final int numThreads, final long seed)
     {
         this.n = n;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.dct = new FloatDCT_1D(n);
         this.random = new Random(seed);
-        ConcurrencyUtils.setThreadsBeginN_1D_FFT_2Threads(1024);
-        ConcurrencyUtils.setThreadsBeginN_1D_FFT_4Threads(1024);
+        CommonUtils.setThreadsBeginN_1D_FFT_2Threads(1024);
+        CommonUtils.setThreadsBeginN_1D_FFT_4Threads(1024);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
@@ -144,9 +148,8 @@ public class FloatDCT_1DTest
     @Test
     public void testScaledLarge()
     {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final FloatLargeArray actual = new FloatLargeArray(n, false);
-        final FloatLargeArray expected = new FloatLargeArray(n, false);
+        final FloatLargeArray actual = new FloatLargeArray(n);
+        final FloatLargeArray expected = new FloatLargeArray(n);
         for (int i = 0; i < n; i++) {
             actual.setFloat(i, 2.f * random.nextFloat() - 1.f);
             expected.setFloat(i, actual.getFloat(i));

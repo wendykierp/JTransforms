@@ -33,6 +33,7 @@ import java.util.Date;
 import java.util.Random;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * I/O utilities.
@@ -61,7 +62,7 @@ public class IOUtils
     {
         double tmp = a - b;
         double rms = tmp * tmp;
-        return Math.sqrt(rms);
+        return sqrt(rms);
     }
 
     /**
@@ -83,7 +84,7 @@ public class IOUtils
             tmp = (a[i] - b[i]);
             rms += tmp * tmp;
         }
-        return Math.sqrt(rms / a.length);
+        return sqrt(rms / a.length);
     }
 
     /**
@@ -105,7 +106,7 @@ public class IOUtils
             tmp = (a.getFloat(i) - b.getFloat(i));
             rms += tmp * tmp;
         }
-        return Math.sqrt(rms / (double) a.length());
+        return sqrt(rms / (double) a.length());
     }
 
     /**
@@ -129,7 +130,7 @@ public class IOUtils
                 rms += tmp * tmp;
             }
         }
-        return Math.sqrt(rms / (a.length * a[0].length));
+        return sqrt(rms / (a.length * a[0].length));
     }
 
     /**
@@ -155,7 +156,7 @@ public class IOUtils
                 }
             }
         }
-        return Math.sqrt(rms / (a.length * a[0].length * a[0][0].length));
+        return sqrt(rms / (a.length * a[0].length * a[0][0].length));
     }
 
     /**
@@ -170,7 +171,7 @@ public class IOUtils
     {
         double tmp = a - b;
         double rms = tmp * tmp;
-        return Math.sqrt(rms);
+        return sqrt(rms);
     }
 
     /**
@@ -192,7 +193,7 @@ public class IOUtils
             tmp = (a[i] - b[i]);
             rms += tmp * tmp;
         }
-        return Math.sqrt(rms / a.length);
+        return sqrt(rms / a.length);
     }
 
     /**
@@ -214,7 +215,7 @@ public class IOUtils
             tmp = (a.getDouble(i) - b.getDouble(i));
             rms += tmp * tmp;
         }
-        return Math.sqrt(rms / (double) a.length());
+        return sqrt(rms / (double) a.length());
     }
 
     /**
@@ -238,7 +239,7 @@ public class IOUtils
                 rms += tmp * tmp;
             }
         }
-        return Math.sqrt(rms / (a.length * a[0].length));
+        return sqrt(rms / (a.length * a[0].length));
     }
 
     /**
@@ -264,7 +265,7 @@ public class IOUtils
                 }
             }
         }
-        return Math.sqrt(rms / (a.length * a[0].length * a[0][0].length));
+        return sqrt(rms / (a.length * a[0].length * a[0][0].length));
     }
 
     /**
@@ -806,7 +807,7 @@ public class IOUtils
         System.out.println("-------------------");
         for (int i = 0; i < n1; i++) {
             for (int j = 0; j < n2; j++) {
-                if (Math.abs(x[i * n2 + j]) < 5e-5) {
+                if (abs(x[i * n2 + j]) < 5e-5) {
                     System.out.print("0\t");
                 } else {
                     System.out.print(String.format(FF, x[i * n2 + j]) + "\t");
@@ -840,7 +841,7 @@ public class IOUtils
             System.out.println("(:,:," + k + ")=\n");
             for (int i = 0; i < n1; i++) {
                 for (int j = 0; j < n2; j++) {
-                    if (Math.abs(x[i * sliceStride + j * rowStride + k]) <= 5e-5) {
+                    if (abs(x[i * sliceStride + j * rowStride + k]) <= 5e-5) {
                         System.out.print("0\t");
                     } else {
                         System.out.print(String.format(FF, x[i * sliceStride + j * rowStride + k]) + "\t");
@@ -871,7 +872,7 @@ public class IOUtils
             System.out.println("(:,:," + k + ")=\n");
             for (int i = 0; i < slices; i++) {
                 for (int j = 0; j < rows; j++) {
-                    if (Math.abs(x[i][j][k]) <= 5e-5) {
+                    if (abs(x[i][j][k]) <= 5e-5) {
                         System.out.print("0\t");
                     } else {
                         System.out.print(String.format(FF, x[i][j][k]) + "\t");
@@ -975,7 +976,7 @@ public class IOUtils
             BufferedWriter out = new BufferedWriter(new FileWriter(filename));
             for (int i = 0; i < n1; i++) {
                 for (int j = 0; j < 2 * n2; j = j + 2) {
-                    if ((Math.abs(x[i * 2 * n2 + j]) < 5e-5) && (Math.abs(x[i * 2 * n2 + j + 1]) < 5e-5)) {
+                    if ((abs(x[i * 2 * n2 + j]) < 5e-5) && (abs(x[i * 2 * n2 + j + 1]) < 5e-5)) {
                         if (x[i * 2 * n2 + j + 1] >= 0.0) {
                             out.write("0 + 0i\t");
                         } else {
@@ -984,7 +985,7 @@ public class IOUtils
                         continue;
                     }
 
-                    if (Math.abs(x[i * 2 * n2 + j + 1]) < 5e-5) {
+                    if (abs(x[i * 2 * n2 + j + 1]) < 5e-5) {
                         if (x[i * 2 * n2 + j + 1] >= 0.0) {
                             out.write(String.format(FF, x[i * 2 * n2 + j]) + " + 0i\t");
                         } else {
@@ -992,7 +993,7 @@ public class IOUtils
                         }
                         continue;
                     }
-                    if (Math.abs(x[i * 2 * n2 + j]) < 5e-5) {
+                    if (abs(x[i * 2 * n2 + j]) < 5e-5) {
                         if (x[i * 2 * n2 + j + 1] >= 0.0) {
                             out.write("0 + " + String.format(FF, x[i * 2 * n2 + j + 1]) + "i\t");
                         } else {
@@ -1032,7 +1033,7 @@ public class IOUtils
             BufferedWriter out = new BufferedWriter(new FileWriter(filename));
             for (int i = 0; i < n1; i++) {
                 for (int j = 0; j < 2 * n2; j = j + 2) {
-                    if ((Math.abs(x[i * 2 * n2 + j]) < 5e-5) && (Math.abs(x[i * 2 * n2 + j + 1]) < 5e-5)) {
+                    if ((abs(x[i * 2 * n2 + j]) < 5e-5) && (abs(x[i * 2 * n2 + j + 1]) < 5e-5)) {
                         if (x[i * 2 * n2 + j + 1] >= 0.0) {
                             out.write("0 + 0i\t");
                         } else {
@@ -1041,7 +1042,7 @@ public class IOUtils
                         continue;
                     }
 
-                    if (Math.abs(x[i * 2 * n2 + j + 1]) < 5e-5) {
+                    if (abs(x[i * 2 * n2 + j + 1]) < 5e-5) {
                         if (x[i * 2 * n2 + j + 1] >= 0.0) {
                             out.write(String.format(FF, x[i * 2 * n2 + j]) + " + 0i\t");
                         } else {
@@ -1049,7 +1050,7 @@ public class IOUtils
                         }
                         continue;
                     }
-                    if (Math.abs(x[i * 2 * n2 + j]) < 5e-5) {
+                    if (abs(x[i * 2 * n2 + j]) < 5e-5) {
                         if (x[i * 2 * n2 + j + 1] >= 0.0) {
                             out.write("0 + " + String.format(FF, x[i * 2 * n2 + j + 1]) + "i\t");
                         } else {
@@ -1089,7 +1090,7 @@ public class IOUtils
             BufferedWriter out = new BufferedWriter(new FileWriter(filename));
             for (int i = 0; i < n1; i++) {
                 for (int j = 0; j < 2 * n2; j = j + 2) {
-                    if ((Math.abs(x[i][j]) < 5e-5) && (Math.abs(x[i][j + 1]) < 5e-5)) {
+                    if ((abs(x[i][j]) < 5e-5) && (abs(x[i][j + 1]) < 5e-5)) {
                         if (x[i][j + 1] >= 0.0) {
                             out.write("0 + 0i\t");
                         } else {
@@ -1098,7 +1099,7 @@ public class IOUtils
                         continue;
                     }
 
-                    if (Math.abs(x[i][j + 1]) < 5e-5) {
+                    if (abs(x[i][j + 1]) < 5e-5) {
                         if (x[i][j + 1] >= 0.0) {
                             out.write(String.format(FF, x[i][j]) + " + 0i\t");
                         } else {
@@ -1106,7 +1107,7 @@ public class IOUtils
                         }
                         continue;
                     }
-                    if (Math.abs(x[i][j]) < 5e-5) {
+                    if (abs(x[i][j]) < 5e-5) {
                         if (x[i][j + 1] >= 0.0) {
                             out.write("0 + " + String.format(FF, x[i][j + 1]) + "i\t");
                         } else {
@@ -1281,7 +1282,7 @@ public class IOUtils
             BufferedWriter out = new BufferedWriter(new FileWriter(filename));
             for (int i = 0; i < n1; i++) {
                 for (int j = 0; j < n2; j++) {
-                    if (Math.abs(x[i * n2 + j]) < 5e-5) {
+                    if (abs(x[i * n2 + j]) < 5e-5) {
                         out.write("0\t");
                     } else {
                         out.write(String.format(FF, x[i * n2 + j]) + "\t");
@@ -1310,7 +1311,7 @@ public class IOUtils
             BufferedWriter out = new BufferedWriter(new FileWriter(filename));
             for (int i = 0; i < n1; i++) {
                 for (int j = 0; j < n2; j++) {
-                    if (Math.abs(x[i * n2 + j]) < 5e-5) {
+                    if (abs(x[i * n2 + j]) < 5e-5) {
                         out.write("0\t");
                     } else {
                         out.write(String.format(FF, x[i * n2 + j]) + "\t");
@@ -1397,9 +1398,9 @@ public class IOUtils
             out.newLine();
             out.write("\tused processors = " + nthread);
             out.newLine();
-            out.write("\tTHREADS_BEGIN_N_2D = " + ConcurrencyUtils.getThreadsBeginN_2D());
+            out.write("\tTHREADS_BEGIN_N_2D = " + CommonUtils.getThreadsBeginN_2D());
             out.newLine();
-            out.write("\tTHREADS_BEGIN_N_3D = " + ConcurrencyUtils.getThreadsBeginN_3D());
+            out.write("\tTHREADS_BEGIN_N_3D = " + CommonUtils.getThreadsBeginN_3D());
             out.newLine();
             out.write("\tnumber of iterations = " + niter);
             out.newLine();

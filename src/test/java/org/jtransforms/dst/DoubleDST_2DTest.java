@@ -29,7 +29,8 @@ package org.jtransforms.dst;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,6 +38,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * This is a series of JUnit tests for the {@link DoubleDST_2D}.
@@ -57,7 +60,7 @@ public class DoubleDST_2DTest
      */
     public static final int SEED = 20110602;
 
-    private static final double EPS = Math.pow(10, -12);
+    private static final double EPS = pow(10, -12);
 
     @Parameters
     public static Collection<Object[]> getParameters()
@@ -117,10 +120,11 @@ public class DoubleDST_2DTest
     {
         this.numRows = numRows;
         this.numCols = numColumns;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.dst = new DoubleDST_2D(numRows, numCols);
         this.random = new Random(seed);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
-        ConcurrencyUtils.setThreadsBeginN_2D(4096);
+        CommonUtils.setThreadsBeginN_2D(4096);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
 
@@ -155,8 +159,8 @@ public class DoubleDST_2DTest
     @Test
     public void testScaledLarge()
     {
-        final DoubleLargeArray actual = new DoubleLargeArray(numRows * numCols, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(numRows * numCols, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(numRows * numCols);
+        final DoubleLargeArray expected = new DoubleLargeArray(numRows * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
                 final double rnd = random.nextDouble();
@@ -169,7 +173,7 @@ public class DoubleDST_2DTest
         double rmse = IOUtils.computeRMSE(actual, expected);
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
     }
-    
+
     /**
      * This is a test of {@link DoubleDST_2D#forward(double[][], boolean)},
      * and {@link DoubleDST_2D#inverse(double[][], boolean)}

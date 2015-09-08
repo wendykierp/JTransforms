@@ -27,7 +27,8 @@
 package org.jtransforms.dht;
 
 import java.util.Arrays;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
 
@@ -90,8 +91,8 @@ public class BenchmarkDoubleDHT
             System.out.println("Default settings are used.");
         }
         ConcurrencyUtils.setNumberOfThreads(nthread);
-        ConcurrencyUtils.setThreadsBeginN_2D(threadsBegin2D);
-        ConcurrencyUtils.setThreadsBeginN_3D(threadsBegin3D);
+        CommonUtils.setThreadsBeginN_2D(threadsBegin2D);
+        CommonUtils.setThreadsBeginN_3D(threadsBegin3D);
         System.out.println("nthred = " + nthread);
         System.out.println("threadsBegin2D = " + threadsBegin2D);
         System.out.println("threadsBegin3D = " + threadsBegin3D);
@@ -140,7 +141,7 @@ public class BenchmarkDoubleDHT
             x = null;
             dht = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleForwardDHT_1D.txt", nthread, niter, doWarmup, doScaling, sizes1D, times_without_constructor, times_with_constructor);
     }
@@ -181,7 +182,7 @@ public class BenchmarkDoubleDHT
             x = null;
             dht2 = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleForwardDHT_2D_input_1D.txt", nthread, niter, doWarmup, doScaling, sizes2D, times_without_constructor, times_with_constructor);
 
@@ -223,7 +224,7 @@ public class BenchmarkDoubleDHT
             x = null;
             dht2 = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleForwardDHT_2D_input_2D.txt", nthread, niter, doWarmup, doScaling, sizes2D, times_without_constructor, times_with_constructor);
 
@@ -265,7 +266,7 @@ public class BenchmarkDoubleDHT
             x = null;
             dht3 = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleForwardDHT_3D_input_1D.txt", nthread, niter, doWarmup, doScaling, sizes3D, times_without_constructor, times_with_constructor);
 
@@ -307,7 +308,7 @@ public class BenchmarkDoubleDHT
             x = null;
             dht3 = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleForwardDHT_3D_input_3D.txt", nthread, niter, doWarmup, doScaling, sizes3D, times_without_constructor, times_with_constructor);
     }

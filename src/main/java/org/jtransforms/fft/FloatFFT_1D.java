@@ -28,10 +28,15 @@ package org.jtransforms.fft;
 
 import java.util.concurrent.Future;
 import org.jtransforms.utils.CommonUtils;
-import org.jtransforms.utils.ConcurrencyUtils;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
 import pl.edu.icm.jlargearrays.LongLargeArray;
-import pl.edu.icm.jlargearrays.Utilities;
+import pl.edu.icm.jlargearrays.LargeArrayUtils;
+import static org.apache.commons.math3.util.FastMath.*;
+import pl.edu.icm.jlargearrays.LargeArray;
 
 /**
  * Computes 1D Discrete Fourier Transform (DFT) of complex and real, single
@@ -42,12 +47,14 @@ import pl.edu.icm.jlargearrays.Utilities;
  * This code is derived from General Purpose FFT Package written by Takuya Ooura
  * (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html) and from JFFTPack written
  * by Baoshe Zhang (http://jfftpack.sourceforge.net/)
- * 
+ *  
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
  */
-public final class FloatFFT_1D {
+public final class FloatFFT_1D
+{
 
-    private static enum Plans {
+    private static enum Plans
+    {
 
         SPLIT_RADIX, MIXED_RADIX, BLUESTEIN
     }
@@ -104,23 +111,25 @@ public final class FloatFFT_1D {
 
     /**
      * Creates new instance of FloatFFT_1D.
-     * 
+     *  
      * @param n size of data
      */
-    public FloatFFT_1D(long n) {
+    public FloatFFT_1D(long n)
+    {
         if (n < 1) {
             throw new IllegalArgumentException("n must be greater than 0");
         }
-        this.useLargeArrays = n >= ConcurrencyUtils.getLargeArraysBeginN();
-        if(this.useLargeArrays == false) {
-            this.n = (int) n;
-            if (!ConcurrencyUtils.isPowerOf2(n)) {
+        this.useLargeArrays = (CommonUtils.isUseLargeArrays() || 2 * n > LargeArray.getMaxSizeOf32bitArray());
+        this.n = (int) n;
+        this.nl = n;
+        if (this.useLargeArrays == false) {
+            if (!CommonUtils.isPowerOf2(n)) {
                 if (CommonUtils.getReminder(n, factors) >= 211) {
                     plan = Plans.BLUESTEIN;
-                    nBluestein = ConcurrencyUtils.nextPow2(this.n * 2 - 1);
+                    nBluestein = CommonUtils.nextPow2(this.n * 2 - 1);
                     bk1 = new float[2 * nBluestein];
                     bk2 = new float[2 * nBluestein];
-                    this.ip = new int[2 + (int) Math.ceil(2 + (1 << (int) (Math.log(nBluestein + 0.5f) / Math.log(2)) / 2))];
+                    this.ip = new int[2 + (int) ceil(2 + (1 << (int) (log(nBluestein + 0.5f) / log(2)) / 2))];
                     this.w = new float[nBluestein];
                     int twon = 2 * nBluestein;
                     nw = twon >> 2;
@@ -137,7 +146,7 @@ public final class FloatFFT_1D {
                 }
             } else {
                 plan = Plans.SPLIT_RADIX;
-                this.ip = new int[2 + (int) Math.ceil(2 + (1 << (int) (Math.log(n + 0.5f) / Math.log(2)) / 2))];
+                this.ip = new int[2 + (int) ceil(2 + (1 << (int) (log(n + 0.5f) / log(2)) / 2))];
                 this.w = new float[this.n];
                 int twon = 2 * this.n;
                 nw = twon >> 2;
@@ -145,39 +154,36 @@ public final class FloatFFT_1D {
                 nc = this.n >> 2;
                 CommonUtils.makect(nc, w, nw, ip);
             }
-        } else {
-            this.nl = n;
-            if (!ConcurrencyUtils.isPowerOf2(nl)) {
-                if (CommonUtils.getReminder(nl, factors) >= 211) {
-                    plan = Plans.BLUESTEIN;
-                    nBluesteinl = ConcurrencyUtils.nextPow2(nl * 2 - 1);
-                    bk1l = new FloatLargeArray(2l * nBluesteinl, false);
-                    bk2l = new FloatLargeArray(2l * nBluesteinl, false);
-                    this.ipl = new LongLargeArray(2l + (long) Math.ceil(2l + (1l << (long) (Math.log(nBluesteinl + 0.5f) / Math.log(2.)) / 2)), false);
-                    this.wl = new FloatLargeArray(nBluesteinl, false);
-                    long twon = 2 * nBluesteinl;
-                    nwl = twon >> 2l;
-                    CommonUtils.makewt(nwl, ipl, wl);
-                    ncl = nBluesteinl >> 2l;
-                    CommonUtils.makect(ncl, wl, nwl, ipl);
-                    bluesteinil();
-                } else {
-                    plan = Plans.MIXED_RADIX;
-                    wtablel = new FloatLargeArray(4 * nl + 15, false);
-                    wtable_rl = new FloatLargeArray(2 * nl + 15, false);
-                    cfftil();
-                    rfftil();
-                }
-            } else {
-                plan = Plans.SPLIT_RADIX;
-                this.ipl = new LongLargeArray(2l + (long) Math.ceil(2 + (1l << (long) (Math.log(nl + 0.5f) / Math.log(2)) / 2)), false);
-                this.wl = new FloatLargeArray(nl, false);
-                long twon = 2 * nl;
+        } else if (!CommonUtils.isPowerOf2(nl)) {
+            if (CommonUtils.getReminder(nl, factors) >= 211) {
+                plan = Plans.BLUESTEIN;
+                nBluesteinl = CommonUtils.nextPow2(nl * 2 - 1);
+                bk1l = new FloatLargeArray(2l * nBluesteinl);
+                bk2l = new FloatLargeArray(2l * nBluesteinl);
+                this.ipl = new LongLargeArray(2l + (long) ceil(2l + (1l << (long) (log(nBluesteinl + 0.5f) / log(2.)) / 2)));
+                this.wl = new FloatLargeArray(nBluesteinl);
+                long twon = 2 * nBluesteinl;
                 nwl = twon >> 2l;
                 CommonUtils.makewt(nwl, ipl, wl);
-                ncl = nl >> 2l;
+                ncl = nBluesteinl >> 2l;
                 CommonUtils.makect(ncl, wl, nwl, ipl);
+                bluesteinil();
+            } else {
+                plan = Plans.MIXED_RADIX;
+                wtablel = new FloatLargeArray(4 * nl + 15);
+                wtable_rl = new FloatLargeArray(2 * nl + 15);
+                cfftil();
+                rfftil();
             }
+        } else {
+            plan = Plans.SPLIT_RADIX;
+            this.ipl = new LongLargeArray(2l + (long) ceil(2 + (1l << (long) (log(nl + 0.5f) / log(2)) / 2)));
+            this.wl = new FloatLargeArray(nl);
+            long twon = 2 * nl;
+            nwl = twon >> 2l;
+            CommonUtils.makewt(nwl, ipl, wl);
+            ncl = nl >> 2l;
+            CommonUtils.makect(ncl, wl, nwl, ipl);
         }
     }
 
@@ -187,14 +193,16 @@ public final class FloatFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * 
-     *      * <pre>
-     * a[2*k] = Re[k], a[2*k+1] = Im[k], 0&lt;=k&lt;n
+     *  
+     * <pre>
+     * a[2*k] = Re[k], 
+     * a[2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * 
+     *  
      * @param a data to transform
      */
-    public void complexForward(float[] a) {
+    public void complexForward(float[] a)
+    {
         complexForward(a, 0);
     }
 
@@ -204,14 +212,16 @@ public final class FloatFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * 
-     *      * <pre>
-     * a[2*k] = Re[k], a[2*k+1] = Im[k], 0&lt;=k&lt;n
+     *  
+     * <pre>
+     * a[2*k] = Re[k], 
+     * a[2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * 
+     *  
      * @param a data to transform
      */
-    public void complexForward(FloatLargeArray a) {
+    public void complexForward(FloatLargeArray a)
+    {
         complexForward(a, 0);
     }
 
@@ -221,15 +231,17 @@ public final class FloatFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * 
-     *      * <pre>
-     * a[offa+2*k] = Re[k], a[offa+2*k+1] = Im[k], 0&lt;=k&lt;n
+     *  
+     * <pre>
+     * a[offa+2*k] = Re[k], 
+     * a[offa+2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * 
-     * @param a data to transform
+     *  
+     * @param a    data to transform
      * @param offa index of the first element in array <code>a</code>
      */
-    public void complexForward(float[] a, int offa) {
+    public void complexForward(float[] a, int offa)
+    {
         if (useLargeArrays) {
             complexForward(new FloatLargeArray(a), offa);
         } else {
@@ -256,17 +268,19 @@ public final class FloatFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * 
-     *      * <pre>
-     * a[offa+2*k] = Re[k], a[offa+2*k+1] = Im[k], 0&lt;=k&lt;n
+     *  
+     * <pre>
+     * a[offa+2*k] = Re[k], 
+     * a[offa+2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * 
-     * @param a data to transform
+     *  
+     * @param a    data to transform
      * @param offa index of the first element in array <code>a</code>
      */
-    public void complexForward(FloatLargeArray a, long offa) {
+    public void complexForward(FloatLargeArray a, long offa)
+    {
         if (!useLargeArrays) {
-            if (a.getData() != null && offa < Integer.MAX_VALUE) {
+            if (!a.isLarge() && !a.isConstant() && offa < Integer.MAX_VALUE) {
                 complexForward(a.getData(), (int) offa);
             } else {
                 throw new IllegalArgumentException("The data array is too big.");
@@ -295,15 +309,17 @@ public final class FloatFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * 
-     *      * <pre>
-     * a[2*k] = Re[k], a[2*k+1] = Im[k], 0&lt;=k&lt;n
+     *  
+     * <pre>
+     * a[2*k] = Re[k], 
+     * a[2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void complexInverse(float[] a, boolean scale) {
+    public void complexInverse(float[] a, boolean scale)
+    {
         complexInverse(a, 0, scale);
     }
 
@@ -313,15 +329,17 @@ public final class FloatFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * 
-     *      * <pre>
-     * a[2*k] = Re[k], a[2*k+1] = Im[k], 0&lt;=k&lt;n
+     *  
+     * <pre>
+     * a[2*k] = Re[k], 
+     * a[2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void complexInverse(FloatLargeArray a, boolean scale) {
+    public void complexInverse(FloatLargeArray a, boolean scale)
+    {
         complexInverse(a, 0, scale);
     }
 
@@ -331,16 +349,18 @@ public final class FloatFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * 
-     *      * <pre>
-     * a[offa+2*k] = Re[k], a[offa+2*k+1] = Im[k], 0&lt;=k&lt;n
+     *  
+     * <pre>
+     * a[offa+2*k] = Re[k], 
+     * a[offa+2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * 
-     * @param a data to transform
-     * @param offa index of the first element in array <code>a</code>
+     *  
+     * @param a     data to transform
+     * @param offa  index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
      */
-    public void complexInverse(float[] a, int offa, boolean scale) {
+    public void complexInverse(float[] a, int offa, boolean scale)
+    {
         if (useLargeArrays) {
             complexInverse(new FloatLargeArray(a), offa, scale);
         } else {
@@ -370,18 +390,20 @@ public final class FloatFFT_1D {
      * sequence: the real and imaginary part, i.e. the size of the input array
      * must be greater or equal 2*n. The physical layout of the input data has
      * to be as follows:<br>
-     * 
-     *      * <pre>
-     * a[offa+2*k] = Re[k], a[offa+2*k+1] = Im[k], 0&lt;=k&lt;n
+     *  
+     * <pre>
+     * a[offa+2*k] = Re[k], 
+     * a[offa+2*k+1] = Im[k], 0&lt;=k&lt;n
      * </pre>
-     * 
-     * @param a data to transform
-     * @param offa index of the first element in array <code>a</code>
+     *  
+     * @param a     data to transform
+     * @param offa  index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
      */
-    public void complexInverse(FloatLargeArray a, long offa, boolean scale) {
+    public void complexInverse(FloatLargeArray a, long offa, boolean scale)
+    {
         if (!useLargeArrays) {
-            if (a.getData() != null && offa < Integer.MAX_VALUE) {
+            if (!a.isLarge() && !a.isConstant() && offa < Integer.MAX_VALUE) {
                 complexInverse(a.getData(), (int) offa, scale);
             } else {
                 throw new IllegalArgumentException("The data array is too big.");
@@ -410,88 +432,96 @@ public final class FloatFFT_1D {
     /**
      * Computes 1D forward DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the output data is as follows:<br>
-     * 
+     *  
      * if n is even then
-     * 
-     *      * <pre>
-     * a[2*k] = Re[k], 0&lt;=k&lt;n/2 a[2*k+1] = Im[k], 0&lt;k&lt;n/2 a[1] =
-     * Re[n/2]
+     *  
+     * <pre>
+     * a[2*k] = Re[k], 0&lt;=k&lt;n/2 
+     * a[2*k+1] = Im[k], 0&lt;k&lt;n/2 
+     * a[1] = Re[n/2]
      * </pre>
-     * 
+     *  
      * if n is odd then
-     * 
-     *      * <pre>
-     * a[2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2
+     *  
+     * <pre>
+     * a[2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 
+     * a[2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2
      * a[1] = Im[(n-1)/2]
      * </pre>
-     * 
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * 
+     *  
      * @param a data to transform
      */
-    public void realForward(float[] a) {
+    public void realForward(float[] a)
+    {
         realForward(a, 0);
     }
 
     /**
      * Computes 1D forward DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the output data is as follows:<br>
-     * 
+     *  
      * if n is even then
-     * 
-     *      * <pre>
-     * a[2*k] = Re[k], 0&lt;=k&lt;n/2 a[2*k+1] = Im[k], 0&lt;k&lt;n/2 a[1] =
-     * Re[n/2]
+     *  
+     * <pre>
+     * a[2*k] = Re[k], 0&lt;=k&lt;n/2 
+     * a[2*k+1] = Im[k], 0&lt;k&lt;n/2 a[1] = Re[n/2]
      * </pre>
-     * 
+     *  
      * if n is odd then
-     * 
-     *      * <pre>
-     * a[2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2
+     *  
+     * <pre>
+     * a[2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 
+     * a[2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2
      * a[1] = Im[(n-1)/2]
      * </pre>
-     * 
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * 
+     *  
      * @param a data to transform
      */
-    public void realForward(FloatLargeArray a) {
+    public void realForward(FloatLargeArray a)
+    {
         realForward(a, 0);
     }
 
     /**
      * Computes 1D forward DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the output data is as follows:<br>
-     * 
+     *  
      * if n is even then
-     * 
-     *      * <pre>
-     * a[offa+2*k] = Re[k], 0&lt;=k&lt;n/2 a[offa+2*k+1] = Im[k], 0&lt;k&lt;n/2
+     *  
+     * <pre>
+     * a[offa+2*k] = Re[k], 0&lt;=k&lt;n/2 
+     * a[offa+2*k+1] = Im[k], 0&lt;k&lt;n/2
      * a[offa+1] = Re[n/2]
      * </pre>
-     * 
+     *  
      * if n is odd then
-     * 
-     *      * <pre>
-     * a[offa+2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[offa+2*k+1] = Im[k],
-     * 0&lt;k&lt;(n-1)/2 a[offa+1] = Im[(n-1)/2]
+     *  
+     * <pre>
+     * a[offa+2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 
+     * a[offa+2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2 
+     * a[offa+1] = Im[(n-1)/2]
      * </pre>
-     * 
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * 
-     * @param a data to transform
+     *  
+     * @param a    data to transform
      * @param offa index of the first element in array <code>a</code>
      */
-    public void realForward(float[] a, int offa) {
+    public void realForward(float[] a, int offa)
+    {
         if (useLargeArrays) {
             realForward(new FloatLargeArray(a), offa);
         } else {
@@ -532,32 +562,35 @@ public final class FloatFFT_1D {
     /**
      * Computes 1D forward DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the output data is as follows:<br>
-     * 
+     *  
      * if n is even then
-     * 
-     *      * <pre>
-     * a[offa+2*k] = Re[k], 0&lt;=k&lt;n/2 a[offa+2*k+1] = Im[k], 0&lt;k&lt;n/2
+     *  
+     * <pre>
+     * a[offa+2*k] = Re[k], 0&lt;=k&lt;n/2 
+     * a[offa+2*k+1] = Im[k], 0&lt;k&lt;n/2
      * a[offa+1] = Re[n/2]
      * </pre>
-     * 
+     *  
      * if n is odd then
-     * 
-     *      * <pre>
-     * a[offa+2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[offa+2*k+1] = Im[k],
-     * 0&lt;k&lt;(n-1)/2 a[offa+1] = Im[(n-1)/2]
+     *  
+     * <pre>
+     * a[offa+2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 
+     * a[offa+2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2 
+     * a[offa+1] = Im[(n-1)/2]
      * </pre>
-     * 
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * 
-     * @param a data to transform
+     *  
+     * @param a    data to transform
      * @param offa index of the first element in array <code>a</code>
      */
-    public void realForward(FloatLargeArray a, long offa) {
+    public void realForward(FloatLargeArray a, long offa)
+    {
         if (!useLargeArrays) {
-            if (a.getData() != null && offa < Integer.MAX_VALUE) {
+            if (!a.isLarge() && !a.isConstant() && offa < Integer.MAX_VALUE) {
                 realForward(a.getData(), (int) offa);
             } else {
                 throw new IllegalArgumentException("The data array is too big.");
@@ -605,10 +638,11 @@ public final class FloatFFT_1D {
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data. To get back the original data,
      * use <code>complexInverse</code> on the output of this method.
-     * 
+     *  
      * @param a data to transform
      */
-    public void realForwardFull(float[] a) {
+    public void realForwardFull(float[] a)
+    {
         realForwardFull(a, 0);
     }
 
@@ -620,10 +654,11 @@ public final class FloatFFT_1D {
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data. To get back the original data,
      * use <code>complexInverse</code> on the output of this method.
-     * 
+     *  
      * @param a data to transform
      */
-    public void realForwardFull(FloatLargeArray a) {
+    public void realForwardFull(FloatLargeArray a)
+    {
         realForwardFull(a, 0);
     }
 
@@ -635,11 +670,12 @@ public final class FloatFFT_1D {
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data. To get back the original data,
      * use <code>complexInverse</code> on the output of this method.
-     * 
-     * @param a data to transform
+     *  
+     * @param a    data to transform
      * @param offa index of the first element in array <code>a</code>
      */
-    public void realForwardFull(final float[] a, final int offa) {
+    public void realForwardFull(final float[] a, final int offa)
+    {
 
         if (useLargeArrays) {
             realForwardFull(new FloatLargeArray(a), offa);
@@ -649,14 +685,16 @@ public final class FloatFFT_1D {
                 case SPLIT_RADIX:
                     realForward(a, offa);
                     int nthreads = ConcurrencyUtils.getNumberOfThreads();
-                    if ((nthreads > 1) && (n / 2 > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                    if ((nthreads > 1) && (n / 2 > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                         Future<?>[] futures = new Future[nthreads];
                         int k = n / 2 / nthreads;
                         for (int i = 0; i < nthreads; i++) {
                             final int firstIdx = i * k;
                             final int lastIdx = (i == (nthreads - 1)) ? n / 2 : firstIdx + k;
-                            futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                                public void run() {
+                            futures[i] = ConcurrencyUtils.submit(new Runnable()
+                            {
+                                public void run()
+                                {
                                     int idx1, idx2;
                                     for (int k = firstIdx; k < lastIdx; k++) {
                                         idx1 = 2 * k;
@@ -667,7 +705,13 @@ public final class FloatFFT_1D {
                                 }
                             });
                         }
-                        ConcurrencyUtils.waitForCompletion(futures);
+                        try {
+                            ConcurrencyUtils.waitForCompletion(futures);
+                        } catch (InterruptedException ex) {
+                            Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                        } catch (ExecutionException ex) {
+                            Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                        }
                     } else {
                         int idx1, idx2;
                         for (int k = 0; k < n / 2; k++) {
@@ -717,14 +761,15 @@ public final class FloatFFT_1D {
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data. To get back the original data,
      * use <code>complexInverse</code> on the output of this method.
-     * 
-     * @param a data to transform
+     *  
+     * @param a    data to transform
      * @param offa index of the first element in array <code>a</code>
      */
-    public void realForwardFull(final FloatLargeArray a, final long offa) {
+    public void realForwardFull(final FloatLargeArray a, final long offa)
+    {
 
         if (!useLargeArrays) {
-            if (a.getData() != null && offa < Integer.MAX_VALUE) {
+            if (!a.isLarge() && !a.isConstant() && offa < Integer.MAX_VALUE) {
                 realForwardFull(a.getData(), (int) offa);
             } else {
                 throw new IllegalArgumentException("The data array is too big.");
@@ -735,14 +780,16 @@ public final class FloatFFT_1D {
                 case SPLIT_RADIX:
                     realForward(a, offa);
                     int nthreads = ConcurrencyUtils.getNumberOfThreads();
-                    if ((nthreads > 1) && (nl / 2 > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                    if ((nthreads > 1) && (nl / 2 > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                         Future<?>[] futures = new Future[nthreads];
                         long k = nl / 2 / nthreads;
                         for (int i = 0; i < nthreads; i++) {
                             final long firstIdx = i * k;
                             final long lastIdx = (i == (nthreads - 1)) ? nl / 2 : firstIdx + k;
-                            futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                                public void run() {
+                            futures[i] = ConcurrencyUtils.submit(new Runnable()
+                            {
+                                public void run()
+                                {
                                     long idx1, idx2;
                                     for (long k = firstIdx; k < lastIdx; k++) {
                                         idx1 = 2 * k;
@@ -753,7 +800,13 @@ public final class FloatFFT_1D {
                                 }
                             });
                         }
-                        ConcurrencyUtils.waitForCompletion(futures);
+                        try {
+                            ConcurrencyUtils.waitForCompletion(futures);
+                        } catch (InterruptedException ex) {
+                            Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                        } catch (ExecutionException ex) {
+                            Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                        }
                     } else {
                         long idx1, idx2;
                         for (long k = 0; k < nl / 2; k++) {
@@ -798,93 +851,102 @@ public final class FloatFFT_1D {
     /**
      * Computes 1D inverse DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the input data has to be as follows:<br>
-     * 
+     *  
      * if n is even then
-     * 
-     *      * <pre>
-     * a[2*k] = Re[k], 0&lt;=k&lt;n/2 a[2*k+1] = Im[k], 0&lt;k&lt;n/2 a[1] =
-     * Re[n/2]
+     *  
+     * <pre>
+     * a[2*k] = Re[k], 0&lt;=k&lt;n/2 
+     * a[2*k+1] = Im[k], 0&lt;k&lt;n/2 
+     * a[1] = Re[n/2]
      * </pre>
-     * 
+     *  
      * if n is odd then
-     * 
-     *      * <pre>
-     * a[2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2
+     *  
+     * <pre>
+     * a[2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 
+     * a[2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2
      * a[1] = Im[(n-1)/2]
      * </pre>
-     * 
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * 
-     * @param a data to transform
-     * 
+     *  
+     * @param a     data to transform
+     *  
      * @param scale if true then scaling is performed
-     * 
+     *  
      */
-    public void realInverse(float[] a, boolean scale) {
+    public void realInverse(float[] a, boolean scale)
+    {
         realInverse(a, 0, scale);
     }
 
     /**
      * Computes 1D inverse DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the input data has to be as follows:<br>
-     * 
+     *  
      * if n is even then
-     * 
-     *      * <pre>
-     * a[2*k] = Re[k], 0&lt;=k&lt;n/2 a[2*k+1] = Im[k], 0&lt;k&lt;n/2 a[1] =
-     * Re[n/2]
+     *  
+     * <pre>
+     * a[2*k] = Re[k], 0&lt;=k&lt;n/2 
+     * a[2*k+1] = Im[k], 0&lt;k&lt;n/2 
+     * a[1] = Re[n/2]
      * </pre>
-     * 
+     *  
      * if n is odd then
-     * 
-     *      * <pre>
-     * a[2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2
+     *  
+     * <pre>
+     * a[2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 
+     * a[2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2
      * a[1] = Im[(n-1)/2]
      * </pre>
-     * 
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * 
-     * @param a data to transform
-     * 
+     *  
+     * @param a     data to transform
+     *  
      * @param scale if true then scaling is performed
-     * 
+     *  
      */
-    public void realInverse(FloatLargeArray a, boolean scale) {
+    public void realInverse(FloatLargeArray a, boolean scale)
+    {
         realInverse(a, 0, scale);
     }
 
     /**
      * Computes 1D inverse DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the input data has to be as follows:<br>
-     * 
+     *  
      * if n is even then
-     * 
-     *      * <pre>
-     * a[offa+2*k] = Re[k], 0&lt;=k&lt;n/2 a[offa+2*k+1] = Im[k], 0&lt;k&lt;n/2
+     *  
+     * <pre>
+     * a[offa+2*k] = Re[k], 0&lt;=k&lt;n/2 
+     * a[offa+2*k+1] = Im[k], 0&lt;k&lt;n/2
      * a[offa+1] = Re[n/2]
      * </pre>
-     * 
+     *  
      * if n is odd then
-     * 
-     *      * <pre>
-     * a[offa+2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[offa+2*k+1] = Im[k],
-     * 0&lt;k&lt;(n-1)/2 a[offa+1] = Im[(n-1)/2]
+     *  
+     * <pre>
+     * a[offa+2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 
+     * a[offa+2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2 
+     * a[offa+1] = Im[(n-1)/2]
      * </pre>
-     * 
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * 
-     * @param a data to transform
-     * @param offa index of the first element in array <code>a</code>
+     *  
+     * @param a     data to transform
+     * @param offa  index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
-     * 
+     *  
      */
-    public void realInverse(float[] a, int offa, boolean scale) {
+    public void realInverse(float[] a, int offa, boolean scale)
+    {
         if (useLargeArrays) {
             realInverse(new FloatLargeArray(a), offa, scale);
         } else {
@@ -931,33 +993,36 @@ public final class FloatFFT_1D {
     /**
      * Computes 1D inverse DFT of real data leaving the result in <code>a</code>
      * . The physical layout of the input data has to be as follows:<br>
-     * 
+     *  
      * if n is even then
-     * 
-     *      * <pre>
-     * a[offa+2*k] = Re[k], 0&lt;=k&lt;n/2 a[offa+2*k+1] = Im[k], 0&lt;k&lt;n/2
+     *  
+     * <pre>
+     * a[offa+2*k] = Re[k], 0&lt;=k&lt;n/2 
+     * a[offa+2*k+1] = Im[k], 0&lt;k&lt;n/2
      * a[offa+1] = Re[n/2]
      * </pre>
-     * 
+     *  
      * if n is odd then
-     * 
-     *      * <pre>
-     * a[offa+2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 a[offa+2*k+1] = Im[k],
-     * 0&lt;k&lt;(n-1)/2 a[offa+1] = Im[(n-1)/2]
+     *  
+     * <pre>
+     * a[offa+2*k] = Re[k], 0&lt;=k&lt;(n+1)/2 
+     * a[offa+2*k+1] = Im[k], 0&lt;k&lt;(n-1)/2 
+     * a[offa+1] = Im[(n-1)/2]
      * </pre>
-     * 
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * 
-     * @param a data to transform
-     * @param offa index of the first element in array <code>a</code>
+     *  
+     * @param a     data to transform
+     * @param offa  index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
-     * 
+     *  
      */
-    public void realInverse(FloatLargeArray a, long offa, boolean scale) {
+    public void realInverse(FloatLargeArray a, long offa, boolean scale)
+    {
         if (!useLargeArrays) {
-            if (a.getData() != null && offa < Integer.MAX_VALUE) {
+            if (!a.isLarge() && !a.isConstant() && offa < Integer.MAX_VALUE) {
                 realInverse(a.getData(), (int) offa, scale);
             } else {
                 throw new IllegalArgumentException("The data array is too big.");
@@ -1010,11 +1075,12 @@ public final class FloatFFT_1D {
      * imaginary part equal 0. Because the result is stored in <code>a</code>,
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data.
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void realInverseFull(float[] a, boolean scale) {
+    public void realInverseFull(float[] a, boolean scale)
+    {
         realInverseFull(a, 0, scale);
     }
 
@@ -1025,11 +1091,12 @@ public final class FloatFFT_1D {
      * imaginary part equal 0. Because the result is stored in <code>a</code>,
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data.
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void realInverseFull(FloatLargeArray a, boolean scale) {
+    public void realInverseFull(FloatLargeArray a, boolean scale)
+    {
         realInverseFull(a, 0, scale);
     }
 
@@ -1040,12 +1107,13 @@ public final class FloatFFT_1D {
      * imaginary part equal 0. Because the result is stored in <code>a</code>,
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data.
-     * 
-     * @param a data to transform
-     * @param offa index of the first element in array <code>a</code>
+     *  
+     * @param a     data to transform
+     * @param offa  index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
      */
-    public void realInverseFull(final float[] a, final int offa, boolean scale) {
+    public void realInverseFull(final float[] a, final int offa, boolean scale)
+    {
         if (useLargeArrays) {
             realInverseFull(new FloatLargeArray(a), offa, scale);
         } else {
@@ -1054,14 +1122,16 @@ public final class FloatFFT_1D {
                 case SPLIT_RADIX:
                     realInverse2(a, offa, scale);
                     int nthreads = ConcurrencyUtils.getNumberOfThreads();
-                    if ((nthreads > 1) && (n / 2 > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                    if ((nthreads > 1) && (n / 2 > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                         Future<?>[] futures = new Future[nthreads];
                         int k = n / 2 / nthreads;
                         for (int i = 0; i < nthreads; i++) {
                             final int firstIdx = i * k;
                             final int lastIdx = (i == (nthreads - 1)) ? n / 2 : firstIdx + k;
-                            futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                                public void run() {
+                            futures[i] = ConcurrencyUtils.submit(new Runnable()
+                            {
+                                public void run()
+                                {
                                     int idx1, idx2;
                                     for (int k = firstIdx; k < lastIdx; k++) {
                                         idx1 = 2 * k;
@@ -1072,7 +1142,13 @@ public final class FloatFFT_1D {
                                 }
                             });
                         }
-                        ConcurrencyUtils.waitForCompletion(futures);
+                        try {
+                            ConcurrencyUtils.waitForCompletion(futures);
+                        } catch (InterruptedException ex) {
+                            Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                        } catch (ExecutionException ex) {
+                            Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                        }
                     } else {
                         int idx1, idx2;
                         for (int k = 0; k < n / 2; k++) {
@@ -1128,14 +1204,15 @@ public final class FloatFFT_1D {
      * imaginary part equal 0. Because the result is stored in <code>a</code>,
      * the size of the input array must greater or equal 2*n, with only the
      * first n elements filled with real data.
-     * 
-     * @param a data to transform
-     * @param offa index of the first element in array <code>a</code>
+     *  
+     * @param a     data to transform
+     * @param offa  index of the first element in array <code>a</code>
      * @param scale if true then scaling is performed
      */
-    public void realInverseFull(final FloatLargeArray a, final long offa, boolean scale) {
+    public void realInverseFull(final FloatLargeArray a, final long offa, boolean scale)
+    {
         if (!useLargeArrays) {
-            if (a.getData() != null && offa < Integer.MAX_VALUE) {
+            if (!a.isLarge() && !a.isConstant() && offa < Integer.MAX_VALUE) {
                 realInverseFull(a.getData(), (int) offa, scale);
             } else {
                 throw new IllegalArgumentException("The data array is too big.");
@@ -1146,14 +1223,16 @@ public final class FloatFFT_1D {
                 case SPLIT_RADIX:
                     realInverse2(a, offa, scale);
                     int nthreads = ConcurrencyUtils.getNumberOfThreads();
-                    if ((nthreads > 1) && (nl / 2 > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                    if ((nthreads > 1) && (nl / 2 > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                         Future<?>[] futures = new Future[nthreads];
                         long k = nl / 2 / nthreads;
                         for (int i = 0; i < nthreads; i++) {
                             final long firstIdx = i * k;
                             final long lastIdx = (i == (nthreads - 1)) ? nl / 2 : firstIdx + k;
-                            futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                                public void run() {
+                            futures[i] = ConcurrencyUtils.submit(new Runnable()
+                            {
+                                public void run()
+                                {
                                     long idx1, idx2;
                                     for (long k = firstIdx; k < lastIdx; k++) {
                                         idx1 = 2 * k;
@@ -1164,7 +1243,13 @@ public final class FloatFFT_1D {
                                 }
                             });
                         }
-                        ConcurrencyUtils.waitForCompletion(futures);
+                        try {
+                            ConcurrencyUtils.waitForCompletion(futures);
+                        } catch (InterruptedException ex) {
+                            Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                        } catch (ExecutionException ex) {
+                            Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+                        }
                     } else {
                         long idx1, idx2;
                         for (long k = 0; k < nl / 2; k++) {
@@ -1213,7 +1298,8 @@ public final class FloatFFT_1D {
         }
     }
 
-    protected void realInverse2(float[] a, int offa, boolean scale) {
+    protected void realInverse2(float[] a, int offa, boolean scale)
+    {
         if (useLargeArrays) {
             realInverse2(new FloatLargeArray(a), offa, scale);
         } else {
@@ -1273,9 +1359,10 @@ public final class FloatFFT_1D {
         }
     }
 
-    protected void realInverse2(FloatLargeArray a, long offa, boolean scale) {
+    protected void realInverse2(FloatLargeArray a, long offa, boolean scale)
+    {
         if (!useLargeArrays) {
-            if (a.getData() != null && offa < Integer.MAX_VALUE) {
+            if (!a.isLarge() && !a.isConstant() && offa < Integer.MAX_VALUE) {
                 realInverse2(a.getData(), (int) offa, scale);
             } else {
                 throw new IllegalArgumentException("The data array is too big.");
@@ -1343,7 +1430,8 @@ public final class FloatFFT_1D {
     /*---------------------------------------------------------
      cffti: initialization of Complex FFT
      --------------------------------------------------------*/
-    void cffti(int n, int offw) {
+    void cffti(int n, int offw)
+    {
         if (n == 1) {
             return;
         }
@@ -1415,8 +1503,8 @@ public final class FloatFFT_1D {
                     fi += 1;
                     arg = fi * argld;
                     int idx = i + twon;
-                    wtable[offw + idx - 1] = (float)Math.cos(arg);
-                    wtable[offw + idx] = (float)Math.sin(arg);
+                    wtable[offw + idx - 1] = (float) cos(arg);
+                    wtable[offw + idx] = (float) sin(arg);
                 }
                 if (ipll > 5) {
                     int idx1 = i1 + twon;
@@ -1430,7 +1518,8 @@ public final class FloatFFT_1D {
 
     }
 
-    final void cffti() {
+    final void cffti()
+    {
         if (n == 1) {
             return;
         }
@@ -1502,8 +1591,8 @@ public final class FloatFFT_1D {
                     fi += 1;
                     arg = fi * argld;
                     int idx = i + twon;
-                    wtable[idx - 1] = (float)Math.cos(arg);
-                    wtable[idx] = (float)Math.sin(arg);
+                    wtable[idx - 1] = (float) cos(arg);
+                    wtable[idx] = (float) sin(arg);
                 }
                 if (ipll > 5) {
                     int idx1 = i1 + twon;
@@ -1517,7 +1606,8 @@ public final class FloatFFT_1D {
 
     }
 
-    final void cfftil() {
+    final void cfftil()
+    {
         if (nl == 1) {
             return;
         }
@@ -1589,8 +1679,8 @@ public final class FloatFFT_1D {
                     fi += 1;
                     arg = fi * argld;
                     long idx = i + twon;
-                    wtablel.setFloat(idx - 1, (float)Math.cos(arg));
-                    wtablel.setFloat(idx, (float)Math.sin(arg));
+                    wtablel.setFloat(idx - 1, (float) cos(arg));
+                    wtablel.setFloat(idx, (float) sin(arg));
                 }
                 if (ipll > 5) {
                     long idx1 = i1 + twon;
@@ -1604,7 +1694,8 @@ public final class FloatFFT_1D {
 
     }
 
-    void rffti() {
+    void rffti()
+    {
 
         if (n == 1) {
             return;
@@ -1679,8 +1770,8 @@ public final class FloatFFT_1D {
                     fi += 1;
                     arg = fi * argld;
                     int idx = i + n;
-                    wtable_r[idx - 2] = (float)Math.cos(arg);
-                    wtable_r[idx - 1] = (float)Math.sin(arg);
+                    wtable_r[idx - 2] = (float) cos(arg);
+                    wtable_r[idx - 1] = (float) sin(arg);
                 }
                 is += ido;
             }
@@ -1688,7 +1779,8 @@ public final class FloatFFT_1D {
         }
     }
 
-    void rfftil() {
+    void rfftil()
+    {
 
         if (nl == 1) {
             return;
@@ -1763,8 +1855,8 @@ public final class FloatFFT_1D {
                     fi += 1;
                     arg = fi * argld;
                     long idx = i + nl;
-                    wtable_rl.setFloat(idx - 2, (float)Math.cos(arg));
-                    wtable_rl.setFloat(idx - 1, (float)Math.sin(arg));
+                    wtable_rl.setFloat(idx - 2, (float) cos(arg));
+                    wtable_rl.setFloat(idx - 1, (float) sin(arg));
                 }
                 is += ido;
             }
@@ -1772,7 +1864,8 @@ public final class FloatFFT_1D {
         }
     }
 
-    private void bluesteini() {
+    private void bluesteini()
+    {
         int k = 0;
         float arg;
         float pi_n = PI / n;
@@ -1784,8 +1877,8 @@ public final class FloatFFT_1D {
                 k -= 2 * n;
             }
             arg = pi_n * k;
-            bk1[2 * i] = (float)Math.cos(arg);
-            bk1[2 * i + 1] = (float)Math.sin(arg);
+            bk1[2 * i] = (float) cos(arg);
+            bk1[2 * i + 1] = (float) sin(arg);
         }
         float scale = 1.0f / nBluestein;
         bk2[0] = bk1[0] * scale;
@@ -1799,7 +1892,8 @@ public final class FloatFFT_1D {
         CommonUtils.cftbsub(2 * nBluestein, bk2, 0, ip, nw, w);
     }
 
-    private void bluesteinil() {
+    private void bluesteinil()
+    {
         long k = 0;
         float arg;
         float pi_n = PI / nl;
@@ -1811,8 +1905,8 @@ public final class FloatFFT_1D {
                 k -= 2 * nl;
             }
             arg = pi_n * k;
-            bk1l.setFloat(2 * i, (float)Math.cos(arg));
-            bk1l.setFloat(2 * i + 1, (float)Math.sin(arg));
+            bk1l.setFloat(2 * i, (float) cos(arg));
+            bk1l.setFloat(2 * i + 1, (float) sin(arg));
         }
         float scale = 1.0f / nBluesteinl;
         bk2l.setFloat(0, bk1l.getFloat(0) * scale);
@@ -1826,12 +1920,13 @@ public final class FloatFFT_1D {
         CommonUtils.cftbsub(2 * nBluesteinl, bk2l, 0, ipl, nwl, wl);
     }
 
-    private void bluestein_complex(final float[] a, final int offa, final int isign) {
+    private void bluestein_complex(final float[] a, final int offa, final int isign)
+    {
         final float[] ak = new float[2 * nBluestein];
         int threads = ConcurrencyUtils.getNumberOfThreads();
-        if ((threads > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((threads > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             int nthreads = 2;
-            if ((threads >= 4) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads())) {
+            if ((threads >= 4) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_4Threads())) {
                 nthreads = 4;
             }
             Future<?>[] futures = new Future[nthreads];
@@ -1839,8 +1934,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final int firstIdx = i * k;
                 final int lastIdx = (i == (nthreads - 1)) ? n : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         if (isign > 0) {
                             for (int i = firstIdx; i < lastIdx; i++) {
                                 int idx1 = 2 * i;
@@ -1863,7 +1960,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftbsub(2 * nBluestein, ak, 0, ip, nw, w);
 
@@ -1871,8 +1974,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final int firstIdx = i * k;
                 final int lastIdx = (i == (nthreads - 1)) ? nBluestein : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         if (isign > 0) {
                             for (int i = firstIdx; i < lastIdx; i++) {
                                 int idx1 = 2 * i;
@@ -1893,7 +1998,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftfsub(2 * nBluestein, ak, 0, ip, nw, w);
 
@@ -1901,8 +2012,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final int firstIdx = i * k;
                 final int lastIdx = (i == (nthreads - 1)) ? n : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         if (isign > 0) {
                             for (int i = firstIdx; i < lastIdx; i++) {
                                 int idx1 = 2 * i;
@@ -1925,7 +2038,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
             if (isign > 0) {
                 for (int i = 0; i < n; i++) {
@@ -1990,12 +2109,13 @@ public final class FloatFFT_1D {
         }
     }
 
-    private void bluestein_complex(final FloatLargeArray a, final long offa, final int isign) {
-        final FloatLargeArray ak = new FloatLargeArray(2 * nBluesteinl, false);
+    private void bluestein_complex(final FloatLargeArray a, final long offa, final int isign)
+    {
+        final FloatLargeArray ak = new FloatLargeArray(2 * nBluesteinl);
         int threads = ConcurrencyUtils.getNumberOfThreads();
-        if ((threads > 1) && (nl > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((threads > 1) && (nl > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             int nthreads = 2;
-            if ((threads >= 4) && (nl > ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads())) {
+            if ((threads >= 4) && (nl > CommonUtils.getThreadsBeginN_1D_FFT_4Threads())) {
                 nthreads = 4;
             }
             Future<?>[] futures = new Future[nthreads];
@@ -2003,8 +2123,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final long firstIdx = i * k;
                 final long lastIdx = (i == (nthreads - 1)) ? nl : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         if (isign > 0) {
                             for (long i = firstIdx; i < lastIdx; i++) {
                                 long idx1 = 2 * i;
@@ -2027,7 +2149,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftbsub(2 * nBluesteinl, ak, 0, ipl, nwl, wl);
 
@@ -2035,8 +2163,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final long firstIdx = i * k;
                 final long lastIdx = (i == (nthreads - 1)) ? nBluesteinl : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         if (isign > 0) {
                             for (long i = firstIdx; i < lastIdx; i++) {
                                 long idx1 = 2 * i;
@@ -2057,7 +2187,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftfsub(2 * nBluesteinl, ak, 0, ipl, nwl, wl);
 
@@ -2065,8 +2201,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final long firstIdx = i * k;
                 final long lastIdx = (i == (nthreads - 1)) ? nl : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         if (isign > 0) {
                             for (long i = firstIdx; i < lastIdx; i++) {
                                 long idx1 = 2 * i;
@@ -2089,7 +2227,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
             if (isign > 0) {
                 for (long i = 0; i < nl; i++) {
@@ -2154,12 +2298,13 @@ public final class FloatFFT_1D {
         }
     }
 
-    private void bluestein_real_full(final float[] a, final int offa, final int isign) {
+    private void bluestein_real_full(final float[] a, final int offa, final int isign)
+    {
         final float[] ak = new float[2 * nBluestein];
         int threads = ConcurrencyUtils.getNumberOfThreads();
-        if ((threads > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((threads > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             int nthreads = 2;
-            if ((threads >= 4) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads())) {
+            if ((threads >= 4) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_4Threads())) {
                 nthreads = 4;
             }
             Future<?>[] futures = new Future[nthreads];
@@ -2167,8 +2312,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final int firstIdx = i * k;
                 final int lastIdx = (i == (nthreads - 1)) ? n : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         if (isign > 0) {
                             for (int i = firstIdx; i < lastIdx; i++) {
                                 int idx1 = 2 * i;
@@ -2189,7 +2336,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftbsub(2 * nBluestein, ak, 0, ip, nw, w);
 
@@ -2197,8 +2350,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final int firstIdx = i * k;
                 final int lastIdx = (i == (nthreads - 1)) ? nBluestein : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         if (isign > 0) {
                             for (int i = firstIdx; i < lastIdx; i++) {
                                 int idx1 = 2 * i;
@@ -2219,7 +2374,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftfsub(2 * nBluestein, ak, 0, ip, nw, w);
 
@@ -2227,8 +2388,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final int firstIdx = i * k;
                 final int lastIdx = (i == (nthreads - 1)) ? n : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         if (isign > 0) {
                             for (int i = firstIdx; i < lastIdx; i++) {
                                 int idx1 = 2 * i;
@@ -2247,7 +2410,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
             if (isign > 0) {
                 for (int i = 0; i < n; i++) {
@@ -2307,12 +2476,13 @@ public final class FloatFFT_1D {
         }
     }
 
-    private void bluestein_real_full(final FloatLargeArray a, final long offa, final long isign) {
-        final FloatLargeArray ak = new FloatLargeArray(2 * nBluesteinl, false);
+    private void bluestein_real_full(final FloatLargeArray a, final long offa, final long isign)
+    {
+        final FloatLargeArray ak = new FloatLargeArray(2 * nBluesteinl);
         int threads = ConcurrencyUtils.getNumberOfThreads();
-        if ((threads > 1) && (nl > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((threads > 1) && (nl > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             int nthreads = 2;
-            if ((threads >= 4) && (nl > ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads())) {
+            if ((threads >= 4) && (nl > CommonUtils.getThreadsBeginN_1D_FFT_4Threads())) {
                 nthreads = 4;
             }
             Future<?>[] futures = new Future[nthreads];
@@ -2320,8 +2490,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final long firstIdx = i * k;
                 final long lastIdx = (i == (nthreads - 1)) ? nl : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         if (isign > 0) {
                             for (long i = firstIdx; i < lastIdx; i++) {
                                 long idx1 = 2 * i;
@@ -2342,7 +2514,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftbsub(2 * nBluesteinl, ak, 0, ipl, nwl, wl);
 
@@ -2350,8 +2528,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final long firstIdx = i * k;
                 final long lastIdx = (i == (nthreads - 1)) ? nBluesteinl : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         if (isign > 0) {
                             for (long i = firstIdx; i < lastIdx; i++) {
                                 long idx1 = 2 * i;
@@ -2372,7 +2552,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftfsub(2 * nBluesteinl, ak, 0, ipl, nwl, wl);
 
@@ -2380,8 +2566,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final long firstIdx = i * k;
                 final long lastIdx = (i == (nthreads - 1)) ? nl : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         if (isign > 0) {
                             for (long i = firstIdx; i < lastIdx; i++) {
                                 long idx1 = 2 * i;
@@ -2400,7 +2588,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
             if (isign > 0) {
                 for (long i = 0; i < nl; i++) {
@@ -2460,12 +2654,13 @@ public final class FloatFFT_1D {
         }
     }
 
-    private void bluestein_real_forward(final float[] a, final int offa) {
+    private void bluestein_real_forward(final float[] a, final int offa)
+    {
         final float[] ak = new float[2 * nBluestein];
         int threads = ConcurrencyUtils.getNumberOfThreads();
-        if ((threads > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((threads > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             int nthreads = 2;
-            if ((threads >= 4) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads())) {
+            if ((threads >= 4) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_4Threads())) {
                 nthreads = 4;
             }
             Future<?>[] futures = new Future[nthreads];
@@ -2473,8 +2668,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final int firstIdx = i * k;
                 final int lastIdx = (i == (nthreads - 1)) ? n : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int i = firstIdx; i < lastIdx; i++) {
                             int idx1 = 2 * i;
                             int idx2 = idx1 + 1;
@@ -2485,7 +2682,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftbsub(2 * nBluestein, ak, 0, ip, nw, w);
 
@@ -2493,8 +2696,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final int firstIdx = i * k;
                 final int lastIdx = (i == (nthreads - 1)) ? nBluestein : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int i = firstIdx; i < lastIdx; i++) {
                             int idx1 = 2 * i;
                             int idx2 = idx1 + 1;
@@ -2505,7 +2710,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
         } else {
 
@@ -2553,12 +2764,13 @@ public final class FloatFFT_1D {
 
     }
 
-    private void bluestein_real_forward(final FloatLargeArray a, final long offa) {
-        final FloatLargeArray ak = new FloatLargeArray(2 * nBluesteinl, false);
+    private void bluestein_real_forward(final FloatLargeArray a, final long offa)
+    {
+        final FloatLargeArray ak = new FloatLargeArray(2 * nBluesteinl);
         int threads = ConcurrencyUtils.getNumberOfThreads();
-        if ((threads > 1) && (nl > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((threads > 1) && (nl > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             int nthreads = 2;
-            if ((threads >= 4) && (nl > ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads())) {
+            if ((threads >= 4) && (nl > CommonUtils.getThreadsBeginN_1D_FFT_4Threads())) {
                 nthreads = 4;
             }
             Future<?>[] futures = new Future[nthreads];
@@ -2566,8 +2778,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final long firstIdx = i * k;
                 final long lastIdx = (i == (nthreads - 1)) ? nl : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long i = firstIdx; i < lastIdx; i++) {
                             long idx1 = 2 * i;
                             long idx2 = idx1 + 1;
@@ -2578,7 +2792,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftbsub(2 * nBluesteinl, ak, 0, ipl, nwl, wl);
 
@@ -2586,8 +2806,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final long firstIdx = i * k;
                 final long lastIdx = (i == (nthreads - 1)) ? nBluesteinl : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long i = firstIdx; i < lastIdx; i++) {
                             long idx1 = 2 * i;
                             long idx2 = idx1 + 1;
@@ -2598,7 +2820,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
         } else {
 
@@ -2646,7 +2874,8 @@ public final class FloatFFT_1D {
 
     }
 
-    private void bluestein_real_inverse(final float[] a, final int offa) {
+    private void bluestein_real_inverse(final float[] a, final int offa)
+    {
         final float[] ak = new float[2 * nBluestein];
         if (n % 2 == 0) {
             ak[0] = a[offa] * bk1[0];
@@ -2705,9 +2934,9 @@ public final class FloatFFT_1D {
         CommonUtils.cftbsub(2 * nBluestein, ak, 0, ip, nw, w);
 
         int threads = ConcurrencyUtils.getNumberOfThreads();
-        if ((threads > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((threads > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             int nthreads = 2;
-            if ((threads >= 4) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads())) {
+            if ((threads >= 4) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_4Threads())) {
                 nthreads = 4;
             }
             Future<?>[] futures = new Future[nthreads];
@@ -2715,8 +2944,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final int firstIdx = i * k;
                 final int lastIdx = (i == (nthreads - 1)) ? nBluestein : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int i = firstIdx; i < lastIdx; i++) {
                             int idx1 = 2 * i;
                             int idx2 = idx1 + 1;
@@ -2727,7 +2958,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftfsub(2 * nBluestein, ak, 0, ip, nw, w);
 
@@ -2735,8 +2972,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final int firstIdx = i * k;
                 final int lastIdx = (i == (nthreads - 1)) ? n : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int i = firstIdx; i < lastIdx; i++) {
                             int idx1 = 2 * i;
                             int idx2 = idx1 + 1;
@@ -2745,7 +2984,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
         } else {
 
@@ -2767,8 +3012,9 @@ public final class FloatFFT_1D {
         }
     }
 
-    private void bluestein_real_inverse(final FloatLargeArray a, final long offa) {
-        final FloatLargeArray ak = new FloatLargeArray(2 * nBluesteinl, false);
+    private void bluestein_real_inverse(final FloatLargeArray a, final long offa)
+    {
+        final FloatLargeArray ak = new FloatLargeArray(2 * nBluesteinl);
         if (nl % 2 == 0) {
             ak.setFloat(0, a.getFloat(offa) * bk1l.getFloat(0));
             ak.setFloat(1, a.getFloat(offa) * bk1l.getFloat(1));
@@ -2826,9 +3072,9 @@ public final class FloatFFT_1D {
         CommonUtils.cftbsub(2 * nBluesteinl, ak, 0, ipl, nwl, wl);
 
         int threads = ConcurrencyUtils.getNumberOfThreads();
-        if ((threads > 1) && (nl > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((threads > 1) && (nl > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             int nthreads = 2;
-            if ((threads >= 4) && (nl > ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads())) {
+            if ((threads >= 4) && (nl > CommonUtils.getThreadsBeginN_1D_FFT_4Threads())) {
                 nthreads = 4;
             }
             Future<?>[] futures = new Future[nthreads];
@@ -2836,8 +3082,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final long firstIdx = i * k;
                 final long lastIdx = (i == (nthreads - 1)) ? nBluesteinl : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long i = firstIdx; i < lastIdx; i++) {
                             long idx1 = 2 * i;
                             long idx2 = idx1 + 1;
@@ -2848,7 +3096,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftfsub(2 * nBluesteinl, ak, 0, ipl, nwl, wl);
 
@@ -2856,8 +3110,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final long firstIdx = i * k;
                 final long lastIdx = (i == (nthreads - 1)) ? nl : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long i = firstIdx; i < lastIdx; i++) {
                             long idx1 = 2 * i;
                             long idx2 = idx1 + 1;
@@ -2866,7 +3122,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
         } else {
 
@@ -2888,12 +3150,13 @@ public final class FloatFFT_1D {
         }
     }
 
-    private void bluestein_real_inverse2(final float[] a, final int offa) {
+    private void bluestein_real_inverse2(final float[] a, final int offa)
+    {
         final float[] ak = new float[2 * nBluestein];
         int threads = ConcurrencyUtils.getNumberOfThreads();
-        if ((threads > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((threads > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             int nthreads = 2;
-            if ((threads >= 4) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads())) {
+            if ((threads >= 4) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_4Threads())) {
                 nthreads = 4;
             }
             Future<?>[] futures = new Future[nthreads];
@@ -2901,8 +3164,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final int firstIdx = i * k;
                 final int lastIdx = (i == (nthreads - 1)) ? n : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int i = firstIdx; i < lastIdx; i++) {
                             int idx1 = 2 * i;
                             int idx2 = idx1 + 1;
@@ -2913,7 +3178,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftbsub(2 * nBluestein, ak, 0, ip, nw, w);
 
@@ -2921,8 +3192,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final int firstIdx = i * k;
                 final int lastIdx = (i == (nthreads - 1)) ? nBluestein : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int i = firstIdx; i < lastIdx; i++) {
                             int idx1 = 2 * i;
                             int idx2 = idx1 + 1;
@@ -2933,7 +3206,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
         } else {
 
@@ -2980,12 +3259,13 @@ public final class FloatFFT_1D {
         }
     }
 
-    private void bluestein_real_inverse2(final FloatLargeArray a, final long offa) {
-        final FloatLargeArray ak = new FloatLargeArray(2 * nBluesteinl, false);
+    private void bluestein_real_inverse2(final FloatLargeArray a, final long offa)
+    {
+        final FloatLargeArray ak = new FloatLargeArray(2 * nBluesteinl);
         int threads = ConcurrencyUtils.getNumberOfThreads();
-        if ((threads > 1) && (nl > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((threads > 1) && (nl > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             int nthreads = 2;
-            if ((threads >= 4) && (nl > ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads())) {
+            if ((threads >= 4) && (nl > CommonUtils.getThreadsBeginN_1D_FFT_4Threads())) {
                 nthreads = 4;
             }
             Future<?>[] futures = new Future[nthreads];
@@ -2993,8 +3273,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final long firstIdx = i * k;
                 final long lastIdx = (i == (nthreads - 1)) ? nl : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long i = firstIdx; i < lastIdx; i++) {
                             long idx1 = 2 * i;
                             long idx2 = idx1 + 1;
@@ -3005,7 +3287,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             CommonUtils.cftbsub(2 * nBluesteinl, ak, 0, ipl, nwl, wl);
 
@@ -3013,8 +3301,10 @@ public final class FloatFFT_1D {
             for (int i = 0; i < nthreads; i++) {
                 final long firstIdx = i * k;
                 final long lastIdx = (i == (nthreads - 1)) ? nBluesteinl : firstIdx + k;
-                futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[i] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long i = firstIdx; i < lastIdx; i++) {
                             long idx1 = 2 * i;
                             long idx2 = idx1 + 1;
@@ -3025,7 +3315,13 @@ public final class FloatFFT_1D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_1D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
         } else {
 
@@ -3075,7 +3371,8 @@ public final class FloatFFT_1D {
     /*---------------------------------------------------------
      rfftf1: further processing of Real forward FFT
      --------------------------------------------------------*/
-    void rfftf(final float a[], final int offa) {
+    void rfftf(final float a[], final int offa)
+    {
         if (n == 1) {
             return;
         }
@@ -3148,14 +3445,15 @@ public final class FloatFFT_1D {
     /*---------------------------------------------------------
      rfftf1: further processing of Real forward FFT
      --------------------------------------------------------*/
-    void rfftf(final FloatLargeArray a, final long offa) {
+    void rfftf(final FloatLargeArray a, final long offa)
+    {
         if (nl == 1) {
             return;
         }
         long l1, l2, na, kh, nf, iw, ido, idl1;
         int ipll;
 
-        final FloatLargeArray ch = new FloatLargeArray(nl, false);
+        final FloatLargeArray ch = new FloatLargeArray(nl);
         final long twon = 2 * nl;
         nf = (long) wtable_rl.getFloat(1 + twon);
         na = 1;
@@ -3216,13 +3514,14 @@ public final class FloatFFT_1D {
         if (na == 1) {
             return;
         }
-        Utilities.arraycopy(ch, 0, a, offa, nl);
+        LargeArrayUtils.arraycopy(ch, 0, a, offa, nl);
     }
 
     /*---------------------------------------------------------
      rfftb1: further processing of Real backward FFT
      --------------------------------------------------------*/
-    void rfftb(final float a[], final int offa) {
+    void rfftb(final float a[], final int offa)
+    {
         if (n == 1) {
             return;
         }
@@ -3295,13 +3594,14 @@ public final class FloatFFT_1D {
     /*---------------------------------------------------------
      rfftb1: further processing of Real backward FFT
      --------------------------------------------------------*/
-    void rfftb(final FloatLargeArray a, final long offa) {
+    void rfftb(final FloatLargeArray a, final long offa)
+    {
         if (nl == 1) {
             return;
         }
         long l1, l2, na, nf, iw, ido, idl1;
         int ipll;
-        FloatLargeArray ch = new FloatLargeArray(nl, false);
+        FloatLargeArray ch = new FloatLargeArray(nl);
         final long twon = 2 * nl;
         nf = (long) wtable_rl.getFloat(1 + twon);
         na = 0;
@@ -3362,13 +3662,14 @@ public final class FloatFFT_1D {
         if (na == 0) {
             return;
         }
-        Utilities.arraycopy(ch, 0, a, offa, nl);
+        LargeArrayUtils.arraycopy(ch, 0, a, offa, nl);
     }
 
     /*-------------------------------------------------
      radf2: Real FFT's forward processing of factor 2
      -------------------------------------------------*/
-    void radf2(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset) {
+    void radf2(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset)
+    {
         int i, ic, idx0, idx1, idx2, idx3, idx4;
         float t1i, t1r, w1r, w1i;
         int iw1;
@@ -3440,7 +3741,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radf2: Real FFT's forward processing of factor 2
      -------------------------------------------------*/
-    void radf2(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset) {
+    void radf2(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset)
+    {
         long i, ic, idx0, idx1, idx2, idx3, idx4;
         float t1i, t1r, w1r, w1i;
         long iw1;
@@ -3512,7 +3814,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radb2: Real FFT's backward processing of factor 2
      -------------------------------------------------*/
-    void radb2(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset) {
+    void radb2(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset)
+    {
         int i, ic;
         float t1i, t1r, w1r, w1i;
         int iw1 = offset;
@@ -3581,7 +3884,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radb2: Real FFT's backward processing of factor 2
      -------------------------------------------------*/
-    void radb2(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset) {
+    void radb2(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset)
+    {
         long i, ic;
         float t1i, t1r, w1r, w1i;
         long iw1 = offset;
@@ -3650,7 +3954,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radf3: Real FFT's forward processing of factor 3 
      -------------------------------------------------*/
-    void radf3(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset) {
+    void radf3(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset)
+    {
         final float taur = -0.5f;
         final float taui = 0.866025403784438707610604524234076962f;
         int i, ic;
@@ -3737,7 +4042,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radf3: Real FFT's forward processing of factor 3 
      -------------------------------------------------*/
-    void radf3(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset) {
+    void radf3(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset)
+    {
         final float taur = -0.5f;
         final float taui = 0.866025403784438707610604524234076962f;
         long i, ic;
@@ -3824,7 +4130,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radb3: Real FFT's backward processing of factor 3
      -------------------------------------------------*/
-    void radb3(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset) {
+    void radb3(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset)
+    {
         final float taur = -0.5f;
         final float taui = 0.866025403784438707610604524234076962f;
         int i, ic;
@@ -3910,7 +4217,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radb3: Real FFT's backward processing of factor 3
      -------------------------------------------------*/
-    void radb3(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset) {
+    void radb3(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset)
+    {
         final float taur = -0.5f;
         final float taui = 0.866025403784438707610604524234076962f;
         long i, ic;
@@ -3996,7 +4304,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radf4: Real FFT's forward processing of factor 4
      -------------------------------------------------*/
-    void radf4(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset) {
+    void radf4(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset)
+    {
         final float hsqt2 = 0.707106781186547572737310929369414225f;
         int i, ic;
         float ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4, w1r, w1i, w2r, w2i, w3r, w3i;
@@ -4134,7 +4443,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radf4: Real FFT's forward processing of factor 4
      -------------------------------------------------*/
-    void radf4(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset) {
+    void radf4(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset)
+    {
         final float hsqt2 = 0.707106781186547572737310929369414225f;
         long i, ic;
         float ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4, w1r, w1i, w2r, w2i, w3r, w3i;
@@ -4272,7 +4582,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radb4: Real FFT's backward processing of factor 4
      -------------------------------------------------*/
-    void radb4(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset) {
+    void radb4(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset)
+    {
         final float sqrt2 = 1.41421356237309514547462185873882845f;
         int i, ic;
         float ci2, ci3, ci4, cr2, cr3, cr4;
@@ -4417,7 +4728,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radb4: Real FFT's backward processing of factor 4
      -------------------------------------------------*/
-    void radb4(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset) {
+    void radb4(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset)
+    {
         final float sqrt2 = 1.41421356237309514547462185873882845f;
         long i, ic;
         float ci2, ci3, ci4, cr2, cr3, cr4;
@@ -4562,7 +4874,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radf5: Real FFT's forward processing of factor 5
      -------------------------------------------------*/
-    void radf5(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset) {
+    void radf5(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset)
+    {
         final float tr11 = 0.309016994374947451262869435595348477f;
         final float ti11 = 0.951056516295153531181938433292089030f;
         final float tr12 = -0.809016994374947340240566973079694435f;
@@ -4706,7 +5019,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radf5: Real FFT's forward processing of factor 5
      -------------------------------------------------*/
-    void radf5(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset) {
+    void radf5(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset)
+    {
         final float tr11 = 0.309016994374947451262869435595348477f;
         final float ti11 = 0.951056516295153531181938433292089030f;
         final float tr12 = -0.809016994374947340240566973079694435f;
@@ -4850,7 +5164,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radb5: Real FFT's backward processing of factor 5
      -------------------------------------------------*/
-    void radb5(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset) {
+    void radb5(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset)
+    {
         final float tr11 = 0.309016994374947451262869435595348477f;
         final float ti11 = 0.951056516295153531181938433292089030f;
         final float tr12 = -0.809016994374947340240566973079694435f;
@@ -4993,7 +5308,8 @@ public final class FloatFFT_1D {
     /*-------------------------------------------------
      radb5: Real FFT's backward processing of factor 5
      -------------------------------------------------*/
-    void radb5(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset) {
+    void radb5(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset)
+    {
         final float tr11 = 0.309016994374947451262869435595348477f;
         final float ti11 = 0.951056516295153531181938433292089030f;
         final float tr12 = -0.809016994374947340240566973079694435f;
@@ -5136,14 +5452,15 @@ public final class FloatFFT_1D {
     /*---------------------------------------------------------
      radfg: Real FFT's forward processing of general factor
      --------------------------------------------------------*/
-    void radfg(final int ido, final int ip, final int l1, final int idl1, final float in[], final int in_off, final float out[], final int out_off, final int offset) {
+    void radfg(final int ido, final int ip, final int l1, final int idl1, final float in[], final int in_off, final float out[], final int out_off, final int offset)
+    {
         int idij, ipph, j2, ic, jc, lc, is, nbd;
         float dc2, ai1, ai2, ar1, ar2, ds2, dcp, arg, dsp, ar1h, ar2h, w1r, w1i;
         int iw1 = offset;
 
         arg = TWO_PI / (float) ip;
-        dcp = (float)Math.cos(arg);
-        dsp = (float)Math.sin(arg);
+        dcp = (float) cos(arg);
+        dsp = (float) sin(arg);
         ipph = (ip + 1) / 2;
         nbd = (ido - 1) / 2;
         if (ido != 1) {
@@ -5427,14 +5744,15 @@ public final class FloatFFT_1D {
     /*---------------------------------------------------------
      radfg: Real FFT's forward processing of general factor
      --------------------------------------------------------*/
-    void radfg(final long ido, final long ip, final long l1, final long idl1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset) {
+    void radfg(final long ido, final long ip, final long l1, final long idl1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset)
+    {
         long idij, ipph, j2, ic, jc, lc, is, nbd;
         float dc2, ai1, ai2, ar1, ar2, ds2, dcp, arg, dsp, ar1h, ar2h, w1r, w1i;
         long iw1 = offset;
 
         arg = TWO_PI / (float) ip;
-        dcp = (float)Math.cos(arg);
-        dsp = (float)Math.sin(arg);
+        dcp = (float) cos(arg);
+        dsp = (float) sin(arg);
         ipph = (ip + 1) / 2;
         nbd = (ido - 1) / 2;
         if (ido != 1) {
@@ -5554,7 +5872,7 @@ public final class FloatFFT_1D {
                 }
             }
         } else {
-            Utilities.arraycopy(out, out_off, in, in_off, idl1);
+            LargeArrayUtils.arraycopy(out, out_off, in, in_off, idl1);
         }
         for (long j = 1; j < ipph; j++) {
             jc = ip - j;
@@ -5718,7 +6036,8 @@ public final class FloatFFT_1D {
     /*---------------------------------------------------------
      radbg: Real FFT's backward processing of general factor
      --------------------------------------------------------*/
-    void radbg(final int ido, final int ip, final int l1, final int idl1, final float in[], final int in_off, final float out[], final int out_off, final int offset) {
+    void radbg(final int ido, final int ip, final int l1, final int idl1, final float in[], final int in_off, final float out[], final int out_off, final int offset)
+    {
         int idij, ipph, j2, ic, jc, lc, is;
         float dc2, ai1, ai2, ar1, ar2, ds2, w1r, w1i;
         int nbd;
@@ -5726,8 +6045,8 @@ public final class FloatFFT_1D {
         int iw1 = offset;
 
         arg = TWO_PI / (float) ip;
-        dcp = (float)Math.cos(arg);
-        dsp = (float)Math.sin(arg);
+        dcp = (float) cos(arg);
+        dsp = (float) sin(arg);
         nbd = (ido - 1) / 2;
         ipph = (ip + 1) / 2;
         int idx0 = ip * ido;
@@ -6014,7 +6333,8 @@ public final class FloatFFT_1D {
     /*---------------------------------------------------------
      radbg: Real FFT's backward processing of general factor
      --------------------------------------------------------*/
-    void radbg(final long ido, final long ip, final long l1, final long idl1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset) {
+    void radbg(final long ido, final long ip, final long l1, final long idl1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset)
+    {
         long idij, ipph, j2, ic, jc, lc, is;
         float dc2, ai1, ai2, ar1, ar2, ds2, w1r, w1i;
         long nbd;
@@ -6022,8 +6342,8 @@ public final class FloatFFT_1D {
         long iw1 = offset;
 
         arg = TWO_PI / (float) ip;
-        dcp = (float)Math.cos(arg);
-        dsp = (float)Math.sin(arg);
+        dcp = (float) cos(arg);
+        dsp = (float) sin(arg);
         nbd = (ido - 1) / 2;
         ipph = (ip + 1) / 2;
         long idx0 = ip * ido;
@@ -6245,7 +6565,7 @@ public final class FloatFFT_1D {
                 }
             }
         }
-        Utilities.arraycopy(out, out_off, in, in_off, idl1);
+        LargeArrayUtils.arraycopy(out, out_off, in, in_off, idl1);
         for (long j = 1; j < ip; j++) {
             long idx1 = j * l1 * ido;
             for (long k = 0; k < l1; k++) {
@@ -6310,7 +6630,8 @@ public final class FloatFFT_1D {
     /*---------------------------------------------------------
      cfftf1: further processing of Complex forward FFT
      --------------------------------------------------------*/
-    void cfftf(float a[], int offa, int isign) {
+    void cfftf(float a[], int offa, int isign)
+    {
         int idot;
         int l1, l2;
         int na, nf, ipll, iw, ido, idl1;
@@ -6390,7 +6711,8 @@ public final class FloatFFT_1D {
     /*---------------------------------------------------------
      cfftf1: further processing of Complex forward FFT
      --------------------------------------------------------*/
-    void cfftf(FloatLargeArray a, long offa, int isign) {
+    void cfftf(FloatLargeArray a, long offa, int isign)
+    {
         long idot;
         long l1, l2;
         long na, nf, iw, ido, idl1;
@@ -6399,7 +6721,7 @@ public final class FloatFFT_1D {
         int ipll;
 
         long iw1, iw2;
-        FloatLargeArray ch = new FloatLargeArray(twon, false);
+        FloatLargeArray ch = new FloatLargeArray(twon);
 
         iw1 = twon;
         iw2 = 4 * nl;
@@ -6464,7 +6786,7 @@ public final class FloatFFT_1D {
         if (na == 0) {
             return;
         }
-        Utilities.arraycopy(ch, 0, a, offa, twon);
+        LargeArrayUtils.arraycopy(ch, 0, a, offa, twon);
 
     }
 
@@ -6472,7 +6794,8 @@ public final class FloatFFT_1D {
      passf2: Complex FFT's forward/backward processing of factor 2;
      isign is +1 for backward and -1 for forward transforms
      ----------------------------------------------------------------------*/
-    void passf2(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset, final int isign) {
+    void passf2(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset, final int isign)
+    {
         float t1i, t1r;
         int iw1;
         iw1 = offset;
@@ -6527,7 +6850,8 @@ public final class FloatFFT_1D {
      passf2: Complex FFT's forward/backward processing of factor 2;
      isign is +1 for backward and -1 for forward transforms
      ----------------------------------------------------------------------*/
-    void passf2(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset, final long isign) {
+    void passf2(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset, final long isign)
+    {
         float t1i, t1r;
         long iw1;
         iw1 = offset;
@@ -6582,7 +6906,8 @@ public final class FloatFFT_1D {
      passf3: Complex FFT's forward/backward processing of factor 3;
      isign is +1 for backward and -1 for forward transforms
      ----------------------------------------------------------------------*/
-    void passf3(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset, final int isign) {
+    void passf3(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset, final int isign)
+    {
         final float taur = -0.5f;
         final float taui = 0.866025403784438707610604524234076962f;
         float ci2, ci3, di2, di3, cr2, cr3, dr2, dr3, ti2, tr2;
@@ -6673,7 +6998,8 @@ public final class FloatFFT_1D {
      passf3: Complex FFT's forward/backward processing of factor 3;
      isign is +1 for backward and -1 for forward transforms
      ----------------------------------------------------------------------*/
-    void passf3(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset, final long isign) {
+    void passf3(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset, final long isign)
+    {
         final float taur = -0.5f;
         final float taui = 0.866025403784438707610604524234076962f;
         float ci2, ci3, di2, di3, cr2, cr3, dr2, dr3, ti2, tr2;
@@ -6764,7 +7090,8 @@ public final class FloatFFT_1D {
      passf4: Complex FFT's forward/backward processing of factor 4;
      isign is +1 for backward and -1 for forward transforms
      ----------------------------------------------------------------------*/
-    void passf4(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset, final int isign) {
+    void passf4(final int ido, final int l1, final float in[], final int in_off, final float out[], final int out_off, final int offset, final int isign)
+    {
         float ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4;
         int iw1, iw2, iw3;
         iw1 = offset;
@@ -6875,7 +7202,8 @@ public final class FloatFFT_1D {
      passf4: Complex FFT's forward/backward processing of factor 4;
      isign is +1 for backward and -1 for forward transforms
      ----------------------------------------------------------------------*/
-    void passf4(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset, final int isign) {
+    void passf4(final long ido, final long l1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset, final int isign)
+    {
         float ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4;
         long iw1, iw2, iw3;
         iw1 = offset;
@@ -7286,7 +7614,8 @@ public final class FloatFFT_1D {
      passfg: Complex FFT's forward/backward processing of general factor;
      isign is +1 for backward and -1 for forward transforms
      ----------------------------------------------------------------------*/
-    void passfg(final int nac[], final int ido, final int ip, final int l1, final int idl1, final float in[], final int in_off, final float out[], final int out_off, final int offset, final int isign) {
+    void passfg(final int nac[], final int ido, final int ip, final int l1, final int idl1, final float in[], final int in_off, final float out[], final int out_off, final int offset, final int isign)
+    {
         int idij, idlj, idot, ipph, l, jc, lc, idj, idl, inc, idp;
         float w1r, w1i, w2i, w2r;
         int iw1;
@@ -7485,7 +7814,8 @@ public final class FloatFFT_1D {
      passfg: Complex FFT's forward/backward processing of general factor;
      isign is +1 for backward and -1 for forward transforms
      ----------------------------------------------------------------------*/
-    void passfg(final int nac[], final long ido, final long ip, final long l1, final long idl1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset, final long isign) {
+    void passfg(final int nac[], final long ido, final long ip, final long l1, final long idl1, final FloatLargeArray in, final long in_off, final FloatLargeArray out, final long out_off, final long offset, final long isign)
+    {
         long idij, idlj, idot, ipph, l, jc, lc, idj, idl, inc, idp;
         float w1r, w1i, w2i, w2r;
         long iw1;
@@ -7620,7 +7950,7 @@ public final class FloatFFT_1D {
             return;
         }
         nac[0] = 0;
-        Utilities.arraycopy(out, out_off, in, in_off, idl1);
+        LargeArrayUtils.arraycopy(out, out_off, in, in_off, idl1);
         long idx0 = l1 * ido;
         for (long j = 1; j < ip; j++) {
             long idx1 = j * idx0;

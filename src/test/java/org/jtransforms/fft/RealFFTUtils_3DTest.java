@@ -29,7 +29,7 @@ package org.jtransforms.fft;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,6 +38,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * Test of the utility class {@link RealFFTUtils_3D}.
@@ -58,9 +59,9 @@ public class RealFFTUtils_3DTest
      */
     public static final int SEED = 20110624;
 
-    private static final double EPSD = Math.pow(10, -12);
+    private static final double EPSD = pow(10, -12);
 
-    private static final double EPSF = Math.pow(10, -3);
+    private static final double EPSF = pow(10, -3);
 
     @Parameters
     public static Collection<Object[]> getParameters()
@@ -178,11 +179,11 @@ public class RealFFTUtils_3DTest
         double rmse = IOUtils.computeRMSE(actual, expected);
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, slices, rows, columns) + ", rmse = " + rmse, 0.0, rmse, EPSD);
     }
-    
+
     @Test
     public void testUnpack1dInputLarge()
     {
-        final DoubleLargeArray actual0 = new DoubleLargeArray(slices * rows * columns, false);
+        final DoubleLargeArray actual0 = new DoubleLargeArray(slices * rows * columns);
         final double[][][] actual = new double[slices][rows][2 * columns];
         final double[][][] expected = new double[slices][rows][2 * columns];
         for (int s = 0; s < slices; s++) {
@@ -237,11 +238,11 @@ public class RealFFTUtils_3DTest
         double rmse = IOUtils.computeRMSE(actual, expected);
         Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, slices, rows, columns) + ", rmse = " + rmse, 0.0, rmse, EPSF);
     }
-    
+
     @Test
     public void testUnpack1fInputLarge()
     {
-        final FloatLargeArray actual0 = new FloatLargeArray(slices * rows * columns, false);
+        final FloatLargeArray actual0 = new FloatLargeArray(slices * rows * columns);
         final float[][][] expected = new float[slices][rows][2 * columns];
         final float[][][] actual = new float[slices][rows][2 * columns];
         for (int s = 0; s < slices; s++) {
@@ -331,7 +332,7 @@ public class RealFFTUtils_3DTest
     {
         final double[] data = new double[slices * rows * columns];
         String msg = String.format(DEFAULT_MESSAGE, numThreads, slices, rows, columns) +
-             "[%d][%d][%d]";
+            "[%d][%d][%d]";
         for (int s = 0; s < slices; s++) {
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < 2 * columns; c++) {
@@ -348,13 +349,13 @@ public class RealFFTUtils_3DTest
             }
         }
     }
-    
+
     @Test
     public void testPack1dInputLarge()
     {
-        final DoubleLargeArray data = new DoubleLargeArray(slices * rows * columns, false);
+        final DoubleLargeArray data = new DoubleLargeArray(slices * rows * columns);
         String msg = String.format(DEFAULT_MESSAGE, numThreads, slices, rows, columns) +
-             "[%d][%d][%d]";
+            "[%d][%d][%d]";
         for (int s = 0; s < slices; s++) {
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < 2 * columns; c++) {
@@ -377,7 +378,7 @@ public class RealFFTUtils_3DTest
     {
         final double[][][] data = new double[slices][rows][columns];
         String msg = String.format(DEFAULT_MESSAGE, numThreads, slices, rows, columns) +
-             "[%d][%d][%d]";
+            "[%d][%d][%d]";
         for (int s = 0; s < slices; s++) {
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < 2 * columns; c++) {
@@ -400,7 +401,7 @@ public class RealFFTUtils_3DTest
     {
         final float[] data = new float[slices * rows * columns];
         String msg = String.format(DEFAULT_MESSAGE, numThreads, slices, rows, columns) +
-             "[%d][%d][%d]";
+            "[%d][%d][%d]";
         for (int s = 0; s < slices; s++) {
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < 2 * columns; c++) {
@@ -417,13 +418,13 @@ public class RealFFTUtils_3DTest
             }
         }
     }
-    
-     @Test
+
+    @Test
     public void testPack1fInputLarge()
     {
-        final FloatLargeArray data = new FloatLargeArray(slices * rows * columns, false);
+        final FloatLargeArray data = new FloatLargeArray(slices * rows * columns);
         String msg = String.format(DEFAULT_MESSAGE, numThreads, slices, rows, columns) +
-             "[%d][%d][%d]";
+            "[%d][%d][%d]";
         for (int s = 0; s < slices; s++) {
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < 2 * columns; c++) {
@@ -446,7 +447,7 @@ public class RealFFTUtils_3DTest
     {
         final float[][][] data = new float[slices][rows][columns];
         String msg = String.format(DEFAULT_MESSAGE, numThreads, slices, rows, columns) +
-             "[%d][%d][%d]";
+            "[%d][%d][%d]";
         for (int s = 0; s < slices; s++) {
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < 2 * columns; c++) {

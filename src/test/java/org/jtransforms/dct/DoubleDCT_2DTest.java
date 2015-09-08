@@ -29,7 +29,8 @@ package org.jtransforms.dct;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,6 +38,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * This is a series of JUnit tests for the {@link DoubleDCT_2D}.
@@ -44,7 +47,8 @@ import pl.edu.icm.jlargearrays.DoubleLargeArray;
  * @author Piotr Wendykier
  */
 @RunWith(value = Parameterized.class)
-public class DoubleDCT_2DTest {
+public class DoubleDCT_2DTest
+{
 
     /**
      * Base message of all exceptions.
@@ -56,12 +60,13 @@ public class DoubleDCT_2DTest {
      */
     public static final int SEED = 20110602;
 
-    private static final double EPS = Math.pow(10, -12);
+    private static final double EPS = pow(10, -8);
 
     @Parameters
-    public static Collection<Object[]> getParameters() {
+    public static Collection<Object[]> getParameters()
+    {
         final int[] size = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 32,
-            64, 100, 120, 128, 256, 310, 511, 512, 1024};
+                            64, 100, 120, 128, 256, 310, 511, 512, 1024};
 
         final ArrayList<Object[]> parameters = new ArrayList<Object[]>();
 
@@ -101,19 +106,21 @@ public class DoubleDCT_2DTest {
     /**
      * Creates a new instance of this test.
      *
-     * @param numRows number of rows
+     * @param numRows    number of rows
      * @param numColumns number of columns
      * @param numThreads the number of threads to be used
-     * @param seed the seed of the random generator
+     * @param seed       the seed of the random generator
      */
     public DoubleDCT_2DTest(final int numRows, final int numColumns,
-            final int numThreads, final long seed) {
+                            final int numThreads, final long seed)
+    {
         this.numRows = numRows;
         this.numCols = numColumns;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.dct = new DoubleDCT_2D(numRows, numCols);
         this.random = new Random(seed);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
-        ConcurrencyUtils.setThreadsBeginN_2D(4096);
+        CommonUtils.setThreadsBeginN_2D(4096);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
 
@@ -123,7 +130,8 @@ public class DoubleDCT_2DTest {
      * set to <code>true</code>.
      */
     @Test
-    public void testScaled() {
+    public void testScaled()
+    {
         final double[] actual = new double[numRows * numCols];
         final double[] expected = new double[numRows * numCols];
         for (int r = 0; r < numRows; r++) {
@@ -146,9 +154,10 @@ public class DoubleDCT_2DTest {
      * parameter set to <code>true</code>.
      */
     @Test
-    public void testScaledLarge() {
-        final DoubleLargeArray actual = new DoubleLargeArray(numRows * numCols, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(numRows * numCols, false);
+    public void testScaledLarge()
+    {
+        final DoubleLargeArray actual = new DoubleLargeArray(numRows * numCols);
+        final DoubleLargeArray expected = new DoubleLargeArray(numRows * numCols);
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
                 final double rnd = random.nextDouble();
@@ -168,7 +177,8 @@ public class DoubleDCT_2DTest {
      * parameter set to <code>true</code>.
      */
     @Test
-    public void testScaled2D() {
+    public void testScaled2D()
+    {
         final double[][] actual = new double[numRows][numCols];
         final double[][] expected = new double[numRows][numCols];
         for (int r = 0; r < numRows; r++) {

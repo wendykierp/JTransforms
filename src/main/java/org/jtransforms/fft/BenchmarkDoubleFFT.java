@@ -27,9 +27,11 @@
 package org.jtransforms.fft;
 
 import java.util.Arrays;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * Benchmark of single precision FFT's
@@ -90,8 +92,8 @@ public class BenchmarkDoubleFFT
             System.out.println("Default settings are used.");
         }
         ConcurrencyUtils.setNumberOfThreads(nthread);
-        ConcurrencyUtils.setThreadsBeginN_2D(threadsBegin2D);
-        ConcurrencyUtils.setThreadsBeginN_3D(threadsBegin3D);
+        CommonUtils.setThreadsBeginN_2D(threadsBegin2D);
+        CommonUtils.setThreadsBeginN_3D(threadsBegin3D);
         System.out.println("nthred = " + nthread);
         System.out.println("threadsBegin2D = " + threadsBegin2D);
         System.out.println("threadsBegin3D = " + threadsBegin3D);
@@ -140,7 +142,7 @@ public class BenchmarkDoubleFFT
             x = null;
             fft = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleComplexForwardFFT_1D.txt", nthread, niter, doWarmup, doScaling, sizes1D, times_without_constructor, times_with_constructor);
 
@@ -182,7 +184,7 @@ public class BenchmarkDoubleFFT
             x = null;
             fft = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleRealForwardFFT_1D.txt", nthread, niter, doWarmup, doScaling, sizes1D, times_without_constructor, times_with_constructor);
 
@@ -210,7 +212,7 @@ public class BenchmarkDoubleFFT
             double min_time = Double.MAX_VALUE;
             int niter_local = niter;
             if (sizes2D[i] >= (1 << 13)) {
-                niter_local = Math.max(1, niter / 10);
+                niter_local = max(1, niter / 10);
             }
             for (int j = 0; j < niter_local; j++) {
                 IOUtils.fillMatrix_2D(sizes2D[i], 2 * sizes2D[i], x);
@@ -228,7 +230,7 @@ public class BenchmarkDoubleFFT
             x = null;
             fft2 = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleComplexForwardFFT_2D_input_1D.txt", nthread, niter, doWarmup, doScaling, sizes2D, times_without_constructor, times_with_constructor);
     }
@@ -269,7 +271,7 @@ public class BenchmarkDoubleFFT
             x = null;
             fft2 = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleComplexForwardFFT_2D_input_2D.txt", nthread, niter, doWarmup, doScaling, sizes2D, times_without_constructor, times_with_constructor);
     }
@@ -310,7 +312,7 @@ public class BenchmarkDoubleFFT
             x = null;
             fft2 = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleRealForwardFFT_2D_input_1D.txt", nthread, niter, doWarmup, doScaling, sizes2D, times_without_constructor, times_with_constructor);
     }
@@ -351,7 +353,7 @@ public class BenchmarkDoubleFFT
             x = null;
             fft2 = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleRealForwardFFT_2D_input_2D.txt", nthread, niter, doWarmup, doScaling, sizes2D, times_without_constructor, times_with_constructor);
     }
@@ -378,7 +380,7 @@ public class BenchmarkDoubleFFT
             double min_time = Double.MAX_VALUE;
             int niter_local = niter;
             if (sizes3D[i] >= (1 << 10)) {
-                niter_local = Math.max(1, niter / 10);
+                niter_local = max(1, niter / 10);
             }
             for (int j = 0; j < niter_local; j++) {
                 IOUtils.fillMatrix_3D(sizes3D[i], sizes3D[i], 2 * sizes3D[i], x);
@@ -396,7 +398,7 @@ public class BenchmarkDoubleFFT
             x = null;
             fft3 = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleComplexForwardFFT_3D_input_1D.txt", nthread, niter, doWarmup, doScaling, sizes3D, times_without_constructor, times_with_constructor);
     }
@@ -437,7 +439,7 @@ public class BenchmarkDoubleFFT
             x = null;
             fft3 = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleComplexForwardFFT_3D_input_3D.txt", nthread, niter, doWarmup, doScaling, sizes3D, times_without_constructor, times_with_constructor);
     }
@@ -478,7 +480,7 @@ public class BenchmarkDoubleFFT
             x = null;
             fft3 = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleRealForwardFFT_3D_input_1D.txt", nthread, niter, doWarmup, doScaling, sizes3D, times_without_constructor, times_with_constructor);
     }
@@ -519,7 +521,7 @@ public class BenchmarkDoubleFFT
             x = null;
             fft3 = null;
             System.gc();
-            ConcurrencyUtils.sleep(5000);
+            CommonUtils.sleep(5000);
         }
         IOUtils.writeFFTBenchmarkResultsToFile("benchmarkDoubleRealForwardFFT_3D_input_3D.txt", nthread, niter, doWarmup, doScaling, sizes3D, times_without_constructor, times_with_constructor);
     }

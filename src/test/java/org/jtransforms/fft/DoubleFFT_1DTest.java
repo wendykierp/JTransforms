@@ -42,9 +42,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * This is a series of JUnit tests for the {@link DoubleFFT_1D}. First,
@@ -79,7 +82,7 @@ public class DoubleFFT_1DTest
      */
     public static final int SEED = 20110602;
 
-    private static final double EPS = Math.pow(10, -12);
+    private static final double EPS = pow(10, -12);
 
     @Parameters
     public static Collection<Object[]> getParameters()
@@ -130,10 +133,11 @@ public class DoubleFFT_1DTest
     public DoubleFFT_1DTest(final int n, final int numThreads, final long seed)
     {
         this.n = n;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.fft = new DoubleFFT_1D(n);
         this.random = new Random(seed);
-        ConcurrencyUtils.setThreadsBeginN_1D_FFT_2Threads(1024);
-        ConcurrencyUtils.setThreadsBeginN_1D_FFT_4Threads(1024);
+        CommonUtils.setThreadsBeginN_1D_FFT_2Threads(1024);
+        CommonUtils.setThreadsBeginN_1D_FFT_4Threads(1024);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
@@ -222,9 +226,8 @@ public class DoubleFFT_1DTest
     @Test
     public void testComplexForwardLarge()
     {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * n, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * n, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * n);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * n);
         readData(String.format(FFTW_INPUT_PATTERN, n), actual);
         readData(String.format(FFTW_OUTPUT_PATTERN, n), expected);
         fft.complexForward(actual);
@@ -258,9 +261,8 @@ public class DoubleFFT_1DTest
     @Test
     public void testComplexInverseScaledLarge()
     {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * n, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * n, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * n);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * n);
         for (int i = 0; i < 2 * n; i++) {
             actual.setDouble(i, 2. * random.nextDouble() - 1.);
             expected.setDouble(i, actual.getDouble(i));
@@ -301,9 +303,8 @@ public class DoubleFFT_1DTest
     @Test
     public void testComplexInverseUnscaledLarge()
     {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * n, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * n, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * n);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * n);
         for (int i = 0; i < 2 * n; i++) {
             actual.setDouble(i, 2. * random.nextDouble() - 1.);
             expected.setDouble(i, actual.getDouble(i));
@@ -333,7 +334,7 @@ public class DoubleFFT_1DTest
         }
         fft.complexForward(expected);
         fft.realForward(actual);
-        if (!ConcurrencyUtils.isPowerOf2(n)) {
+        if (!CommonUtils.isPowerOf2(n)) {
             int m;
             if (n % 2 == 0) {
                 m = n / 2;
@@ -369,9 +370,8 @@ public class DoubleFFT_1DTest
     @Test
     public void testRealForwardLarge()
     {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * n, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * n, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * n);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * n);
         for (int i = 0; i < n; i++) {
             actual.setDouble(i, 2. * random.nextDouble() - 1.);
             expected.setDouble(2 * i, actual.getDouble(i));
@@ -379,7 +379,7 @@ public class DoubleFFT_1DTest
         }
         fft.complexForward(expected);
         fft.realForward(actual);
-        if (!ConcurrencyUtils.isPowerOf2(n)) {
+        if (!CommonUtils.isPowerOf2(n)) {
             int m;
             if (n % 2 == 0) {
                 m = n / 2;
@@ -434,9 +434,8 @@ public class DoubleFFT_1DTest
     @Test
     public void testRealForwardFullLarge()
     {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * n, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * n, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * n);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * n);
         for (int i = 0; i < n; i++) {
             actual.setDouble(i, 2. * random.nextDouble() - 1.);
             expected.setDouble(2 * i, actual.getDouble(i));
@@ -475,9 +474,8 @@ public class DoubleFFT_1DTest
     @Test
     public void testRealInverseFullScaledLarge()
     {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * n, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * n, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * n);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * n);
         for (int i = 0; i < n; i++) {
             actual.setDouble(i, 2. * random.nextDouble() - 1.);
             expected.setDouble(2 * i, actual.getDouble(i));
@@ -516,9 +514,8 @@ public class DoubleFFT_1DTest
     @Test
     public void testRealInverseFullUnscaledLarge()
     {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final DoubleLargeArray actual = new DoubleLargeArray(2 * n, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(2 * n, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(2 * n);
+        final DoubleLargeArray expected = new DoubleLargeArray(2 * n);
         for (int i = 0; i < n; i++) {
             actual.setDouble(i, 2. * random.nextDouble() - 1.);
             expected.setDouble(2 * i, actual.getDouble(i));
@@ -556,9 +553,8 @@ public class DoubleFFT_1DTest
     @Test
     public void testRealInverseScaledLarge()
     {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final DoubleLargeArray actual = new DoubleLargeArray(n, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(n, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(n);
+        final DoubleLargeArray expected = new DoubleLargeArray(n);
         for (int i = 0; i < n; i++) {
             actual.setDouble(i, 2. * random.nextDouble() - 1.);
             expected.setDouble(i, actual.getDouble(i));
@@ -585,7 +581,7 @@ public class DoubleFFT_1DTest
         fft.realForward(actual);
         fft.realInverse(actual, false);
         double s;
-        if (ConcurrencyUtils.isPowerOf2(n) && n > 1) {
+        if (CommonUtils.isPowerOf2(n) && n > 1) {
             s = 2. / (double) n;
         } else {
             s = 1. / (double) n;
@@ -604,9 +600,8 @@ public class DoubleFFT_1DTest
     @Test
     public void testRealInverseUnscaledLarge()
     {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final DoubleLargeArray actual = new DoubleLargeArray(n, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(n, false);
+        final DoubleLargeArray actual = new DoubleLargeArray(n);
+        final DoubleLargeArray expected = new DoubleLargeArray(n);
         for (int i = 0; i < n; i++) {
             actual.setDouble(i, 2. * random.nextDouble() - 1.);
             expected.setDouble(i, actual.getDouble(i));
@@ -615,7 +610,7 @@ public class DoubleFFT_1DTest
         fft.realInverse(actual, false);
 
         double s;
-        if (ConcurrencyUtils.isPowerOf2(n) && n > 1) {
+        if (CommonUtils.isPowerOf2(n) && n > 1) {
             s = 2. / (double) n;
         } else {
             s = 1. / (double) n;

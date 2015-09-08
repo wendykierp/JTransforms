@@ -26,21 +26,291 @@
  * ***** END LICENSE BLOCK ***** */
 package org.jtransforms.utils;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import static org.apache.commons.math3.util.FastMath.*;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
 import pl.edu.icm.jlargearrays.LongLargeArray;
 
 /**
- * Static methods used internally in FFT and DCT code.
- * 
+ * Static utility methods.
+ *  
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
  */
 public class CommonUtils
 {
 
+    private static long THREADS_BEGIN_N_1D_FFT_2THREADS = 8192;
+
+    private static long THREADS_BEGIN_N_1D_FFT_4THREADS = 65536;
+
+    private static long THREADS_BEGIN_N_2D = 65536;
+
+    private static long THREADS_BEGIN_N_3D = 65536;
+
+    private static boolean useLargeArrays = false;
+
     public CommonUtils()
     {
+    }
+
+    /**
+     * Causes the currently executing thread to sleep (temporarily cease
+     * execution) for the specified number of milliseconds.
+     *
+     * @param millis the length of time to sleep in milliseconds
+     */
+    public static void sleep(long millis)
+    {
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Returns the minimal size of 1D data for which two threads are used.
+     *
+     * @return the minimal size of 1D data for which two threads are used
+     */
+    public static long getThreadsBeginN_1D_FFT_2Threads()
+    {
+        return THREADS_BEGIN_N_1D_FFT_2THREADS;
+    }
+
+    /**
+     * Returns the minimal size of 1D data for which four threads are used.
+     *
+     * @return the minimal size of 1D data for which four threads are used
+     */
+    public static long getThreadsBeginN_1D_FFT_4Threads()
+    {
+        return THREADS_BEGIN_N_1D_FFT_4THREADS;
+    }
+
+    /**
+     * Returns the minimal size of 2D data for which threads are used.
+     *
+     * @return the minimal size of 2D data for which threads are used
+     */
+    public static long getThreadsBeginN_2D()
+    {
+        return THREADS_BEGIN_N_2D;
+    }
+
+    /**
+     * Returns the minimal size of 3D data for which threads are used.
+     *
+     * @return the minimal size of 3D data for which threads are used
+     */
+    public static long getThreadsBeginN_3D()
+    {
+        return THREADS_BEGIN_N_3D;
+    }
+
+    /**
+     * Sets the minimal size of 1D data for which two threads are used.
+     *
+     * @param n the minimal size of 1D data for which two threads are used
+     */
+    public static void setThreadsBeginN_1D_FFT_2Threads(long n)
+    {
+        if (n < 1024) {
+            THREADS_BEGIN_N_1D_FFT_2THREADS = 1024;
+        } else {
+            THREADS_BEGIN_N_1D_FFT_2THREADS = n;
+        }
+    }
+
+    /**
+     * Sets the minimal size of 1D data for which four threads are used.
+     *
+     * @param n the minimal size of 1D data for which four threads are used
+     */
+    public static void setThreadsBeginN_1D_FFT_4Threads(long n)
+    {
+        if (n < 1024) {
+            THREADS_BEGIN_N_1D_FFT_4THREADS = 1024;
+        } else {
+            THREADS_BEGIN_N_1D_FFT_4THREADS = n;
+        }
+    }
+
+    /**
+     * Sets the minimal size of 2D data for which threads are used.
+     *
+     * @param n the minimal size of 2D data for which threads are used
+     */
+    public static void setThreadsBeginN_2D(long n)
+    {
+        if (n < 4096) {
+            THREADS_BEGIN_N_2D = 4096;
+        } else {
+            THREADS_BEGIN_N_2D = n;
+        }
+    }
+
+    /**
+     * Sets the minimal size of 3D data for which threads are used.
+     *
+     * @param n the minimal size of 3D data for which threads are used
+     */
+    public static void setThreadsBeginN_3D(long n)
+    {
+        THREADS_BEGIN_N_3D = n;
+    }
+
+    /**
+     * Resets the minimal size of 1D data for which two and four threads are
+     * used.
+     */
+    public static void resetThreadsBeginN_FFT()
+    {
+        THREADS_BEGIN_N_1D_FFT_2THREADS = 8192;
+        THREADS_BEGIN_N_1D_FFT_4THREADS = 65536;
+    }
+
+    /**
+     * Resets the minimal size of 2D and 3D data for which threads are used.
+     */
+    public static void resetThreadsBeginN()
+    {
+        THREADS_BEGIN_N_2D = 65536;
+        THREADS_BEGIN_N_3D = 65536;
+    }
+
+    /**
+     * Returns the value of useLargeArrays variable.
+     *  
+     * @return the value of useLargeArrays variable
+     */
+    public static boolean isUseLargeArrays()
+    {
+        return useLargeArrays;
+    }
+
+    /**
+     * Sets the value of useLargeArrays variable.
+     *  
+     * @param useLargeArrays the value of useLargeArrays variable
+     */
+    public static void setUseLargeArrays(boolean useLargeArrays)
+    {
+        CommonUtils.useLargeArrays = useLargeArrays;
+    }
+
+    /**
+     * Returns the closest power-of-two number greater than or equal to x.
+     *
+     * @param x input value
+     *
+     * @return the closest power-of-two number greater than or equal to x
+     */
+    public static int nextPow2(int x)
+    {
+        if (x < 1) {
+            throw new IllegalArgumentException("x must be greater or equal 1");
+        }
+        if ((x & (x - 1)) == 0) {
+            return x; // x is already a power-of-two number 
+        }
+        x |= (x >>> 1);
+        x |= (x >>> 2);
+        x |= (x >>> 4);
+        x |= (x >>> 8);
+        x |= (x >>> 16);
+        return x + 1;
+    }
+
+    /**
+     * Returns the closest power-of-two number greater than or equal to x.
+     *
+     * @param x input value
+     *
+     * @return the closest power-of-two number greater than or equal to x
+     */
+    public static long nextPow2(long x)
+    {
+        if (x < 1) {
+            throw new IllegalArgumentException("x must be greater or equal 1");
+        }
+        if ((x & (x - 1l)) == 0) {
+            return x; // x is already a power-of-two number 
+        }
+        x |= (x >>> 1l);
+        x |= (x >>> 2l);
+        x |= (x >>> 4l);
+        x |= (x >>> 8l);
+        x |= (x >>> 16l);
+        x |= (x >>> 32l);
+        return x + 1l;
+    }
+
+    /**
+     * Returns the closest power-of-two number less than or equal to x.
+     *
+     * @param x input value
+     *
+     * @return the closest power-of-two number less then or equal to x
+     */
+    public static int prevPow2(int x)
+    {
+        if (x < 1) {
+            throw new IllegalArgumentException("x must be greater or equal 1");
+        }
+        return (int) pow(2, floor(log(x) / log(2)));
+    }
+
+    /**
+     * Returns the closest power-of-two number less than or equal to x.
+     *
+     * @param x input value
+     *
+     * @return the closest power-of-two number less then or equal to x
+     */
+    public static long prevPow2(long x)
+    {
+        if (x < 1) {
+            throw new IllegalArgumentException("x must be greater or equal 1");
+        }
+        return (long) pow(2, floor(log(x) / log(2)));
+    }
+
+    /**
+     * Checks if x is a power-of-two number.
+     *
+     * @param x input value
+     *
+     * @return true if x is a power-of-two number
+     */
+    public static boolean isPowerOf2(int x)
+    {
+        if (x <= 0) {
+            return false;
+        } else {
+            return (x & (x - 1)) == 0;
+        }
+    }
+
+    /**
+     * Checks if x is a power-of-two number.
+     *
+     * @param x input value
+     *
+     * @return true if x is a power-of-two number
+     */
+    public static boolean isPowerOf2(long x)
+    {
+        if (x <= 0) {
+            return false;
+        } else {
+            return (x & (x - 1l)) == 0;
+        }
     }
 
     public static long getReminder(long n, int factors[])
@@ -110,23 +380,23 @@ public class CommonUtils
             nwh = nw >> 1;
             delta = 0.785398163397448278999490867136046290 / nwh;
             delta2 = delta * 2;
-            wn4r = Math.cos(delta * nwh);
+            wn4r = cos(delta * nwh);
             w[0] = 1;
             w[1] = wn4r;
             if (nwh == 4) {
-                w[2] = Math.cos(delta2);
-                w[3] = Math.sin(delta2);
+                w[2] = cos(delta2);
+                w[3] = sin(delta2);
             } else if (nwh > 4) {
                 CommonUtils.makeipt(nw, ip);
-                w[2] = 0.5 / Math.cos(delta2);
-                w[3] = 0.5 / Math.cos(delta * 6);
+                w[2] = 0.5 / cos(delta2);
+                w[3] = 0.5 / cos(delta * 6);
                 for (j = 4; j < nwh; j += 4) {
                     deltaj = delta * j;
                     deltaj3 = 3 * deltaj;
-                    w[j] = Math.cos(deltaj);
-                    w[j + 1] = Math.sin(deltaj);
-                    w[j + 2] = Math.cos(deltaj3);
-                    w[j + 3] = -Math.sin(deltaj3);
+                    w[j] = cos(deltaj);
+                    w[j + 1] = sin(deltaj);
+                    w[j + 2] = cos(deltaj3);
+                    w[j + 3] = -sin(deltaj3);
                 }
             }
             nw0 = 0;
@@ -175,23 +445,23 @@ public class CommonUtils
             nwh = nw >> 1;
             delta = 0.785398163397448278999490867136046290 / nwh;
             delta2 = delta * 2;
-            wn4r = Math.cos(delta * nwh);
+            wn4r = cos(delta * nwh);
             wl.setDouble(0, 1);
             wl.setDouble(1, wn4r);
             if (nwh == 4) {
-                wl.setDouble(2, Math.cos(delta2));
-                wl.setDouble(3, Math.sin(delta2));
+                wl.setDouble(2, cos(delta2));
+                wl.setDouble(3, sin(delta2));
             } else if (nwh > 4) {
                 CommonUtils.makeipt(nw, ipl);
-                wl.setDouble(2, 0.5 / Math.cos(delta2));
-                wl.setDouble(3, 0.5 / Math.cos(delta * 6));
+                wl.setDouble(2, 0.5 / cos(delta2));
+                wl.setDouble(3, 0.5 / cos(delta * 6));
                 for (j = 4; j < nwh; j += 4) {
                     deltaj = delta * j;
                     deltaj3 = 3 * deltaj;
-                    wl.setDouble(j, Math.cos(deltaj));
-                    wl.setDouble(j + 1, Math.sin(deltaj));
-                    wl.setDouble(j + 2, Math.cos(deltaj3));
-                    wl.setDouble(j + 3, -Math.sin(deltaj3));
+                    wl.setDouble(j, cos(deltaj));
+                    wl.setDouble(j + 1, sin(deltaj));
+                    wl.setDouble(j + 2, cos(deltaj3));
+                    wl.setDouble(j + 3, -sin(deltaj3));
                 }
             }
             nw0 = 0;
@@ -237,12 +507,12 @@ public class CommonUtils
         if (nc > 1) {
             nch = nc >> 1;
             delta = 0.785398163397448278999490867136046290 / nch;
-            c[startc] = Math.cos(delta * nch);
+            c[startc] = cos(delta * nch);
             c[startc + nch] = 0.5 * c[startc];
             for (j = 1; j < nch; j++) {
                 deltaj = delta * j;
-                c[startc + j] = 0.5 * Math.cos(deltaj);
-                c[startc + nc - j] = 0.5 * Math.sin(deltaj);
+                c[startc + j] = 0.5 * cos(deltaj);
+                c[startc + nc - j] = 0.5 * sin(deltaj);
             }
         }
     }
@@ -256,12 +526,12 @@ public class CommonUtils
         if (nc > 1) {
             nch = nc >> 1l;
             delta = 0.785398163397448278999490867136046290 / nch;
-            c.setDouble(startc, Math.cos(delta * nch));
+            c.setDouble(startc, cos(delta * nch));
             c.setDouble(startc + nch, 0.5 * c.getDouble(startc));
             for (j = 1; j < nch; j++) {
                 deltaj = delta * j;
-                c.setDouble(startc + j, 0.5 * Math.cos(deltaj));
-                c.setDouble(startc + nc - j, 0.5 * Math.sin(deltaj));
+                c.setDouble(startc + j, 0.5 * cos(deltaj));
+                c.setDouble(startc + nc - j, 0.5 * sin(deltaj));
             }
         }
     }
@@ -275,12 +545,12 @@ public class CommonUtils
         if (nc > 1) {
             nch = nc >> 1;
             delta = 0.785398163397448278999490867136046290f / nch;
-            c[startc] = (float) Math.cos(delta * nch);
+            c[startc] = (float) cos(delta * nch);
             c[startc + nch] = 0.5f * c[startc];
             for (j = 1; j < nch; j++) {
                 deltaj = delta * j;
-                c[startc + j] = 0.5f * (float) Math.cos(deltaj);
-                c[startc + nc - j] = 0.5f * (float) Math.sin(deltaj);
+                c[startc + j] = 0.5f * (float) cos(deltaj);
+                c[startc + nc - j] = 0.5f * (float) sin(deltaj);
             }
         }
     }
@@ -294,12 +564,12 @@ public class CommonUtils
         if (nc > 1) {
             nch = nc >> 1l;
             delta = 0.785398163397448278999490867136046290f / nch;
-            c.setFloat(startc, (float) Math.cos(delta * nch));
+            c.setFloat(startc, (float) cos(delta * nch));
             c.setFloat(startc + nch, 0.5f * c.getFloat(startc));
             for (j = 1; j < nch; j++) {
                 deltaj = delta * j;
-                c.setFloat(startc + j, 0.5f * (float) Math.cos(deltaj));
-                c.setFloat(startc + nc - j, 0.5f * (float) Math.sin(deltaj));
+                c.setFloat(startc + j, 0.5f * (float) cos(deltaj));
+                c.setFloat(startc + nc - j, 0.5f * (float) sin(deltaj));
             }
         }
     }
@@ -316,23 +586,23 @@ public class CommonUtils
             nwh = nw >> 1;
             delta = 0.785398163397448278999490867136046290f / nwh;
             delta2 = delta * 2;
-            wn4r = (float) Math.cos(delta * nwh);
+            wn4r = (float) cos(delta * nwh);
             w[0] = 1;
             w[1] = wn4r;
             if (nwh == 4) {
-                w[2] = (float) Math.cos(delta2);
-                w[3] = (float) Math.sin(delta2);
+                w[2] = (float) cos(delta2);
+                w[3] = (float) sin(delta2);
             } else if (nwh > 4) {
                 CommonUtils.makeipt(nw, ip);
-                w[2] = 0.5f / (float) Math.cos(delta2);
-                w[3] = 0.5f / (float) Math.cos(delta * 6);
+                w[2] = 0.5f / (float) cos(delta2);
+                w[3] = 0.5f / (float) cos(delta * 6);
                 for (j = 4; j < nwh; j += 4) {
                     deltaj = delta * j;
                     deltaj3 = 3 * deltaj;
-                    w[j] = (float) Math.cos(deltaj);
-                    w[j + 1] = (float) Math.sin(deltaj);
-                    w[j + 2] = (float) Math.cos(deltaj3);
-                    w[j + 3] = -(float) Math.sin(deltaj3);
+                    w[j] = (float) cos(deltaj);
+                    w[j + 1] = (float) sin(deltaj);
+                    w[j + 2] = (float) cos(deltaj3);
+                    w[j + 3] = -(float) sin(deltaj3);
                 }
             }
             nw0 = 0;
@@ -381,23 +651,23 @@ public class CommonUtils
             nwh = nw >> 1;
             delta = 0.785398163397448278999490867136046290f / nwh;
             delta2 = delta * 2;
-            wn4r = (float) Math.cos(delta * nwh);
+            wn4r = (float) cos(delta * nwh);
             wl.setFloat(0, 1);
             wl.setFloat(1, wn4r);
             if (nwh == 4) {
-                wl.setFloat(2, (float) Math.cos(delta2));
-                wl.setFloat(3, (float) Math.sin(delta2));
+                wl.setFloat(2, (float) cos(delta2));
+                wl.setFloat(3, (float) sin(delta2));
             } else if (nwh > 4) {
                 CommonUtils.makeipt(nw, ipl);
-                wl.setFloat(2, 0.5f / (float) Math.cos(delta2));
-                wl.setFloat(3, 0.5f / (float) Math.cos(delta * 6));
+                wl.setFloat(2, 0.5f / (float) cos(delta2));
+                wl.setFloat(3, 0.5f / (float) cos(delta * 6));
                 for (j = 4; j < nwh; j += 4) {
                     deltaj = delta * j;
                     deltaj3 = 3 * deltaj;
-                    wl.setFloat(j, (float) Math.cos(deltaj));
-                    wl.setFloat(j + 1, (float) Math.sin(deltaj));
-                    wl.setFloat(j + 2, (float) Math.cos(deltaj3));
-                    wl.setFloat(j + 3, -(float) Math.sin(deltaj3));
+                    wl.setFloat(j, (float) cos(deltaj));
+                    wl.setFloat(j + 1, (float) sin(deltaj));
+                    wl.setFloat(j + 2, (float) cos(deltaj3));
+                    wl.setFloat(j + 3, -(float) sin(deltaj3));
                 }
             }
             nw0 = 0;
@@ -439,7 +709,7 @@ public class CommonUtils
         if (n > 8) {
             if (n > 32) {
                 cftf1st(n, a, offa, w, nw - (n >> 2));
-                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                     cftrec4_th(n, a, offa, nw, w);
                 } else if (n > 512) {
                     cftrec4(n, a, offa, nw, w);
@@ -468,7 +738,7 @@ public class CommonUtils
         if (n > 8) {
             if (n > 32) {
                 cftf1st(n, a, offa, w, nw - (n >> 2l));
-                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                     cftrec4_th(n, a, offa, nw, w);
                 } else if (n > 512) {
                     cftrec4(n, a, offa, nw, w);
@@ -497,7 +767,7 @@ public class CommonUtils
         if (n > 8) {
             if (n > 32) {
                 cftb1st(n, a, offa, w, nw - (n >> 2));
-                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                     cftrec4_th(n, a, offa, nw, w);
                 } else if (n > 512) {
                     cftrec4(n, a, offa, nw, w);
@@ -526,7 +796,7 @@ public class CommonUtils
         if (n > 8) {
             if (n > 32) {
                 cftb1st(n, a, offa, w, nw - (n >> 2l));
-                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                     cftrec4_th(n, a, offa, nw, w);
                 } else if (n > 512) {
                     cftrec4(n, a, offa, nw, w);
@@ -3456,7 +3726,7 @@ public class CommonUtils
         nthreads = 2;
         idiv4 = 0;
         m = n >> 1;
-        if (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads()) {
+        if (n >= CommonUtils.getThreadsBeginN_1D_FFT_4Threads()) {
             nthreads = 4;
             idiv4 = 1;
             m >>= 1;
@@ -3513,7 +3783,13 @@ public class CommonUtils
                 });
             }
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public static void cftrec4_th(final long n, final DoubleLargeArray a, final long offa, final long nw, final DoubleLargeArray w)
@@ -3524,7 +3800,7 @@ public class CommonUtils
         nthreads = 2;
         idiv4 = 0;
         m = n >> 1l;
-        if (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads()) {
+        if (n >= CommonUtils.getThreadsBeginN_1D_FFT_4Threads()) {
             nthreads = 4;
             idiv4 = 1;
             m >>= 1l;
@@ -3581,7 +3857,13 @@ public class CommonUtils
                 });
             }
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public static void cftrec4(int n, double[] a, int offa, int nw, double[] w)
@@ -5625,7 +5907,7 @@ public class CommonUtils
         if (n > 8) {
             if (n > 32) {
                 cftf1st(n, a, offa, w, nw - (n >> 2));
-                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                     cftrec4_th(n, a, offa, nw, w);
                 } else if (n > 512) {
                     cftrec4(n, a, offa, nw, w);
@@ -5654,7 +5936,7 @@ public class CommonUtils
         if (n > 8) {
             if (n > 32) {
                 cftf1st(n, a, offa, w, nw - (n >> 2l));
-                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                     cftrec4_th(n, a, offa, nw, w);
                 } else if (n > 512) {
                     cftrec4(n, a, offa, nw, w);
@@ -5683,7 +5965,7 @@ public class CommonUtils
         if (n > 8) {
             if (n > 32) {
                 cftb1st(n, a, offa, w, nw - (n >> 2));
-                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                     cftrec4_th(n, a, offa, nw, w);
                 } else if (n > 512) {
                     cftrec4(n, a, offa, nw, w);
@@ -5712,7 +5994,7 @@ public class CommonUtils
         if (n > 8) {
             if (n > 32) {
                 cftb1st(n, a, offa, w, nw - (n >> 2l));
-                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+                if ((ConcurrencyUtils.getNumberOfThreads() > 1) && (n >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
                     cftrec4_th(n, a, offa, nw, w);
                 } else if (n > 512) {
                     cftrec4(n, a, offa, nw, w);
@@ -8642,7 +8924,7 @@ public class CommonUtils
         nthreads = 2;
         idiv4 = 0;
         m = n >> 1;
-        if (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads()) {
+        if (n >= CommonUtils.getThreadsBeginN_1D_FFT_4Threads()) {
             nthreads = 4;
             idiv4 = 1;
             m >>= 1;
@@ -8699,7 +8981,13 @@ public class CommonUtils
                 });
             }
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public static void cftrec4_th(final long n, final FloatLargeArray a, final long offa, final long nw, final FloatLargeArray w)
@@ -8710,7 +8998,7 @@ public class CommonUtils
         nthreads = 2;
         idiv4 = 0;
         m = n >> 1l;
-        if (n >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_4Threads()) {
+        if (n >= CommonUtils.getThreadsBeginN_1D_FFT_4Threads()) {
             nthreads = 4;
             idiv4 = 1;
             m >>= 1l;
@@ -8767,7 +9055,13 @@ public class CommonUtils
                 });
             }
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public static void cftrec4(int n, float[] a, int offa, int nw, float[] w)
@@ -10815,7 +11109,7 @@ public class CommonUtils
         } else {
             n2 = n;
         }
-        if ((nthreads > 1) && (n2 > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((nthreads > 1) && (n2 > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             nthreads = 2;
             final int k = n2 / nthreads;
             Future<?>[] futures = new Future[nthreads];
@@ -10833,7 +11127,13 @@ public class CommonUtils
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
             int firstIdx = offa;
             int lastIdx = offa + n2;
@@ -10852,7 +11152,7 @@ public class CommonUtils
         } else {
             n2 = nl;
         }
-        if ((nthreads > 1) && (n2 >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((nthreads > 1) && (n2 >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             final long k = n2 / nthreads;
             Future<?>[] futures = new Future[nthreads];
             for (int i = 0; i < nthreads; i++) {
@@ -10869,7 +11169,13 @@ public class CommonUtils
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
             for (long i = offa; i < offa + n2; i++) {
                 a.setDouble(i, a.getDouble(i) * m);
@@ -10887,7 +11193,7 @@ public class CommonUtils
         } else {
             n2 = n;
         }
-        if ((nthreads > 1) && (n2 > ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((nthreads > 1) && (n2 > CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             nthreads = 2;
             final int k = n2 / nthreads;
             Future<?>[] futures = new Future[nthreads];
@@ -10905,7 +11211,13 @@ public class CommonUtils
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
             int firstIdx = offa;
             int lastIdx = offa + n2;
@@ -10924,7 +11236,7 @@ public class CommonUtils
         } else {
             n2 = nl;
         }
-        if ((nthreads > 1) && (n2 >= ConcurrencyUtils.getThreadsBeginN_1D_FFT_2Threads())) {
+        if ((nthreads > 1) && (n2 >= CommonUtils.getThreadsBeginN_1D_FFT_2Threads())) {
             final long k = n2 / nthreads;
             Future<?>[] futures = new Future[nthreads];
             for (int i = 0; i < nthreads; i++) {
@@ -10941,7 +11253,13 @@ public class CommonUtils
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
             for (long i = offa; i < offa + n2; i++) {
                 a.setDouble(i, a.getDouble(i) * m);

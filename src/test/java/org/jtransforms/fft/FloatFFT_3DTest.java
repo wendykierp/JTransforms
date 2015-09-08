@@ -29,7 +29,8 @@ package org.jtransforms.fft;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,21 +38,23 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
- * 
+ *
  * This is a test of the class {@link FloatFFT_3D}. In this test, a very crude
  * 3d FFT method is implemented (see {@link #complexForward(float[][][])}),
  * assuming that {@link FloatFFT_1D} and {@link FloatFFT_2D} have been fully
  * tested and validated. This crude (unoptimized) method is then used to
  * establish <em>expected</em> values of <em>direct</em> Fourier transforms.
  * </p>
- * 
+ *  
  * For <em>inverse</em> Fourier transforms, the test assumes that the
  * corresponding <em>direct</em> Fourier transform has been tested and
  * validated.
  * </p>
- * 
+ *  
  * In all cases, the test consists in creating a random array of data, and
  * verifying that expected and actual values of its Fourier transform coincide
  * within a specified accuracy.
@@ -74,7 +77,9 @@ public class FloatFFT_3DTest
      */
     public static final int SEED = 20110625;
 
-    private static final double EPS = Math.pow(10, -3);
+    private static final double EPS = pow(10, -3);
+
+    private static final double EPS_UNSCALED = 0.5;
 
     @Parameters
     public static Collection<Object[]> getParameters()
@@ -152,17 +157,18 @@ public class FloatFFT_3DTest
      *                   the seed of the random generator
      */
     public FloatFFT_3DTest(final int numSlices, final int numRows,
-                            final int numColumns, final int numThreads, final long seed)
+                           final int numColumns, final int numThreads, final long seed)
     {
         this.numSlices = numSlices;
         this.numRows = numRows;
         this.numCols = numColumns;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.fft = new FloatFFT_3D(numSlices, numRows, numColumns);
         this.xfft = new FloatFFT_1D(numSlices);
         this.sfft = new FloatFFT_2D(numRows, numColumns);
         this.random = new Random(seed);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
-        ConcurrencyUtils.setThreadsBeginN_3D(4);
+        CommonUtils.setThreadsBeginN_3D(4);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
 
@@ -231,9 +237,9 @@ public class FloatFFT_3DTest
     @Test
     public void testComplexForwardLarge()
     {
-        final FloatLargeArray actual = new FloatLargeArray(2 * numSlices * numRows * numCols, false);
+        final FloatLargeArray actual = new FloatLargeArray(2 * numSlices * numRows * numCols);
         final float[][][] expected0 = new float[numSlices][numRows][2 * numCols];
-        final FloatLargeArray expected = new FloatLargeArray(2 * numSlices * numRows * numCols, false);
+        final FloatLargeArray expected = new FloatLargeArray(2 * numSlices * numRows * numCols);
         for (int s = 0; s < numSlices; s++) {
             for (int r = 0; r < numRows; r++) {
                 for (int c = 0; c < 2 * numCols; c++) {
@@ -307,8 +313,8 @@ public class FloatFFT_3DTest
     @Test
     public void testComplexInverseScaledLarge()
     {
-        final FloatLargeArray expected = new FloatLargeArray(2 * numSlices * numRows * numCols, false);
-        final FloatLargeArray actual = new FloatLargeArray(2 * numSlices * numRows * numCols, false);
+        final FloatLargeArray expected = new FloatLargeArray(2 * numSlices * numRows * numCols);
+        final FloatLargeArray actual = new FloatLargeArray(2 * numSlices * numRows * numCols);
         for (int i = 0; i < actual.length(); i++) {
             final float rnd = random.nextFloat();
             actual.setFloat(i, rnd);
@@ -365,7 +371,7 @@ public class FloatFFT_3DTest
             expected[i] = scaling * expected[i];
         }
         double rmse = IOUtils.computeRMSE(actual, expected);
-        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numSlices, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
+        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numSlices, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS_UNSCALED);
     }
 
     /**
@@ -375,8 +381,8 @@ public class FloatFFT_3DTest
     @Test
     public void testComplexInverseUnscaledLarge()
     {
-        final FloatLargeArray expected = new FloatLargeArray(2 * numSlices * numRows * numCols, false);
-        final FloatLargeArray actual = new FloatLargeArray(2 * numSlices * numRows * numCols, false);
+        final FloatLargeArray expected = new FloatLargeArray(2 * numSlices * numRows * numCols);
+        final FloatLargeArray actual = new FloatLargeArray(2 * numSlices * numRows * numCols);
         for (int i = 0; i < actual.length(); i++) {
             final float rnd = random.nextFloat();
             actual.setFloat(i, rnd);
@@ -389,7 +395,7 @@ public class FloatFFT_3DTest
             expected.setFloat(i, scaling * expected.getFloat(i));
         }
         double rmse = IOUtils.computeRMSE(actual, expected);
-        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numSlices, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
+        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numSlices, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS_UNSCALED);
     }
 
     /**
@@ -421,7 +427,7 @@ public class FloatFFT_3DTest
             }
         }
         double rmse = IOUtils.computeRMSE(actual, expected);
-        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numSlices, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS);
+        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, numSlices, numRows, numCols) + ", rmse = " + rmse, 0.0, rmse, EPS_UNSCALED);
     }
 
     private void fillSymmetric(final float[] a, int slices, int rows, int columns)
@@ -560,13 +566,13 @@ public class FloatFFT_3DTest
     @Test
     public void testRealForward1dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numSlices)) {
+        if (!CommonUtils.isPowerOf2(numSlices)) {
             return;
         }
         int index;
@@ -726,18 +732,18 @@ public class FloatFFT_3DTest
     @Test
     public void testRealForwardLarge()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numSlices)) {
+        if (!CommonUtils.isPowerOf2(numSlices)) {
             return;
         }
         int index;
-        final FloatLargeArray actual = new FloatLargeArray(numSlices * numRows * 2 * numCols, false);
-        final FloatLargeArray expected = new FloatLargeArray(numSlices * numRows * 2 * numCols, false);
+        final FloatLargeArray actual = new FloatLargeArray(numSlices * numRows * 2 * numCols);
+        final FloatLargeArray expected = new FloatLargeArray(numSlices * numRows * 2 * numCols);
         for (int s = 0; s < numSlices; s++) {
             for (int r = 0; r < numRows; r++) {
                 for (int c = 0; c < numCols; c++) {
@@ -829,13 +835,13 @@ public class FloatFFT_3DTest
     @Test
     public void testRealForward3dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numSlices)) {
+        if (!CommonUtils.isPowerOf2(numSlices)) {
             return;
         }
         final float[][][] actual = new float[numSlices][numRows][2 * numCols];
@@ -863,13 +869,13 @@ public class FloatFFT_3DTest
     @Test
     public void testRealInverseScaled1dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numSlices)) {
+        if (!CommonUtils.isPowerOf2(numSlices)) {
             return;
         }
         final float[] actual = new float[numRows * numCols * numSlices];
@@ -892,17 +898,17 @@ public class FloatFFT_3DTest
     @Test
     public void testRealInverseScaledLarge()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numSlices)) {
+        if (!CommonUtils.isPowerOf2(numSlices)) {
             return;
         }
-        final FloatLargeArray actual = new FloatLargeArray(numRows * numCols * numSlices, false);
-        final FloatLargeArray expected = new FloatLargeArray(actual.length(), false);
+        final FloatLargeArray actual = new FloatLargeArray(numRows * numCols * numSlices);
+        final FloatLargeArray expected = new FloatLargeArray(actual.length());
         for (int i = 0; i < actual.length(); i++) {
             final float rnd = random.nextFloat();
             actual.setFloat(i, rnd);
@@ -921,13 +927,13 @@ public class FloatFFT_3DTest
     @Test
     public void testRealInverseScaled3dInput()
     {
-        if (!ConcurrencyUtils.isPowerOf2(numRows)) {
+        if (!CommonUtils.isPowerOf2(numRows)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numCols)) {
+        if (!CommonUtils.isPowerOf2(numCols)) {
             return;
         }
-        if (!ConcurrencyUtils.isPowerOf2(numSlices)) {
+        if (!CommonUtils.isPowerOf2(numSlices)) {
             return;
         }
         final float[][][] actual = new float[numSlices][numRows][numCols];
@@ -974,8 +980,8 @@ public class FloatFFT_3DTest
     public void testRealForwardFullLarge()
     {
         final int n = numSlices * numRows * numCols;
-        final FloatLargeArray actual = new FloatLargeArray(2 * n, false);
-        final FloatLargeArray expected = new FloatLargeArray(2 * n, false);
+        final FloatLargeArray actual = new FloatLargeArray(2 * n);
+        final FloatLargeArray expected = new FloatLargeArray(2 * n);
         for (int index = 0; index < n; index++) {
             final float rnd = random.nextFloat();
             actual.setFloat(index, rnd);
@@ -1039,8 +1045,8 @@ public class FloatFFT_3DTest
     public void testRealInverseFullScaledLarge()
     {
         final int n = numSlices * numRows * numCols;
-        final FloatLargeArray actual = new FloatLargeArray(2 * n, false);
-        final FloatLargeArray expected = new FloatLargeArray(2 * n, false);
+        final FloatLargeArray actual = new FloatLargeArray(2 * n);
+        final FloatLargeArray expected = new FloatLargeArray(2 * n);
         for (int index = 0; index < n; index++) {
             final float rnd = random.nextFloat();
             actual.setFloat(index, rnd);

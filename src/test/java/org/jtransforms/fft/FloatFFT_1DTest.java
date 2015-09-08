@@ -35,7 +35,8 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -44,6 +45,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * This is a series of JUnit tests for the {@link FloatFFT_1D}. First,
@@ -55,7 +58,8 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
  * @author Piotr Wendykier
  */
 @RunWith(value = Parameterized.class)
-public class FloatFFT_1DTest {
+public class FloatFFT_1DTest
+{
 
     /**
      * Base message of all exceptions.
@@ -77,13 +81,16 @@ public class FloatFFT_1DTest {
      */
     public static final int SEED = 20110602;
 
-    private static final double EPS = Math.pow(10, -4);
+    private static final double EPS = pow(10, -4);
+
+    private static final double EPS_UNSCALED = 0.5;
 
     @Parameters
-    public static Collection<Object[]> getParameters() {
+    public static Collection<Object[]> getParameters()
+    {
         final int[] size = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 32,
-            64, 100, 120, 128, 256, 310, 512, 1024, 1056, 2048, 8192,
-            10158, 16384, 32768, 65530, 65536, 131072};
+                            64, 100, 120, 128, 256, 310, 512, 1024, 1056, 2048, 8192,
+                            10158, 16384, 32768, 65530, 65536, 131072};
 
         final ArrayList<Object[]> parameters = new ArrayList<Object[]>();
         for (int i = 0; i < size.length; i++) {
@@ -117,16 +124,18 @@ public class FloatFFT_1DTest {
     /**
      * Creates a new instance of this class.
      *
-     * @param n the size of the FFT to be tested
+     * @param n          the size of the FFT to be tested
      * @param numThreads the number of threads
-     * @param seed the seed of the random generator
+     * @param seed       the seed of the random generator
      */
-    public FloatFFT_1DTest(final int n, final int numThreads, final long seed) {
+    public FloatFFT_1DTest(final int n, final int numThreads, final long seed)
+    {
         this.n = n;
         this.fft = new FloatFFT_1D(n);
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.random = new Random(seed);
-        ConcurrencyUtils.setThreadsBeginN_1D_FFT_2Threads(1024);
-        ConcurrencyUtils.setThreadsBeginN_1D_FFT_4Threads(1024);
+        CommonUtils.setThreadsBeginN_1D_FFT_2Threads(1024);
+        CommonUtils.setThreadsBeginN_1D_FFT_4Threads(1024);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
@@ -138,12 +147,13 @@ public class FloatFFT_1DTest {
      *
      * @param name the file name
      * @param data the array to be updated with the data read (the size of this
-     * array gives the number of <code>double</code> to be retrieved
+     *             array gives the number of <code>double</code> to be retrieved
      */
-    public void readData(final String name, final double[] data) {
+    public void readData(final String name, final double[] data)
+    {
         try {
             final File f = new File(getClass().getClassLoader()
-                    .getResource(name).getFile());
+                .getResource(name).getFile());
             final FileInputStream fin = new FileInputStream(f);
             final FileChannel fc = fin.getChannel();
             final ByteBuffer buffer = ByteBuffer.allocate(8 * data.length);
@@ -164,12 +174,13 @@ public class FloatFFT_1DTest {
      *
      * @param name the file name
      * @param data the array to be updated with the data read (the size of this
-     * array gives the number of <code>double</code> to be retrieved
+     *             array gives the number of <code>double</code> to be retrieved
      */
-    public void readData(final String name, final DoubleLargeArray data) {
+    public void readData(final String name, final DoubleLargeArray data)
+    {
         try {
             final File f = new File(getClass().getClassLoader()
-                    .getResource(name).getFile());
+                .getResource(name).getFile());
             final FileInputStream fin = new FileInputStream(f);
             final FileChannel fc = fin.getChannel();
             final ByteBuffer buffer = ByteBuffer.allocate(8 * (int) data.length());
@@ -189,7 +200,8 @@ public class FloatFFT_1DTest {
      * and comparison with results obtained with FFTW.
      */
     @Test
-    public void testComplexForward() {
+    public void testComplexForward()
+    {
         final float[] actual = new float[2 * n];
         final double[] expected0 = new double[2 * n];
         readData(String.format(FFTW_INPUT_PATTERN, n), expected0);
@@ -212,10 +224,10 @@ public class FloatFFT_1DTest {
      * data, and comparison with results obtained with FFTW.
      */
     @Test
-    public void testComplexForwardLarge() {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final FloatLargeArray actual = new FloatLargeArray(2 * n, false);
-        final DoubleLargeArray expected0 = new DoubleLargeArray(2 * n, false);
+    public void testComplexForwardLarge()
+    {
+        final FloatLargeArray actual = new FloatLargeArray(2 * n);
+        final DoubleLargeArray expected0 = new DoubleLargeArray(2 * n);
         readData(String.format(FFTW_INPUT_PATTERN, n), expected0);
         for (int index = 0; index < actual.length(); index++) {
             actual.setFloat(index, expected0.getFloat(index));
@@ -235,7 +247,8 @@ public class FloatFFT_1DTest {
      * with the second parameter set to <code>true</code>.
      */
     @Test
-    public void testComplexInverseScaled() {
+    public void testComplexInverseScaled()
+    {
         final float[] actual = new float[2 * n];
         final float[] expected = new float[2 * n];
         for (int i = 0; i < 2 * n; i++) {
@@ -254,10 +267,10 @@ public class FloatFFT_1DTest {
      * second parameter set to <code>true</code>.
      */
     @Test
-    public void testComplexInverseScaledLarge() {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final FloatLargeArray actual = new FloatLargeArray(2 * n, false);
-        final FloatLargeArray expected = new FloatLargeArray(2 * n, false);
+    public void testComplexInverseScaledLarge()
+    {
+        final FloatLargeArray actual = new FloatLargeArray(2 * n);
+        final FloatLargeArray expected = new FloatLargeArray(2 * n);
         for (int i = 0; i < 2 * n; i++) {
             actual.setFloat(i, 2.f * random.nextFloat() - 1.f);
             expected.setFloat(i, actual.getFloat(i));
@@ -273,7 +286,8 @@ public class FloatFFT_1DTest {
      * with the second parameter set to <code>false</code>.
      */
     @Test
-    public void testComplexInverseUnscaled() {
+    public void testComplexInverseUnscaled()
+    {
         final float[] actual = new float[2 * n];
         final float[] expected = new float[2 * n];
         for (int i = 0; i < 2 * n; i++) {
@@ -287,7 +301,7 @@ public class FloatFFT_1DTest {
             actual[i] = s * actual[i];
         }
         double rmse = IOUtils.computeRMSE(actual, expected);
-        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS);
+        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS_UNSCALED);
     }
 
     /**
@@ -296,10 +310,10 @@ public class FloatFFT_1DTest {
      * second parameter set to <code>false</code>.
      */
     @Test
-    public void testComplexInverseUnscaledLarge() {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final FloatLargeArray actual = new FloatLargeArray(2 * n, false);
-        final FloatLargeArray expected = new FloatLargeArray(2 * n, false);
+    public void testComplexInverseUnscaledLarge()
+    {
+        final FloatLargeArray actual = new FloatLargeArray(2 * n);
+        final FloatLargeArray expected = new FloatLargeArray(2 * n);
         for (int i = 0; i < 2 * n; i++) {
             actual.setFloat(i, 2.f * random.nextFloat() - 1.f);
             expected.setFloat(i, actual.getFloat(i));
@@ -311,14 +325,15 @@ public class FloatFFT_1DTest {
             actual.setFloat(i, s * actual.getFloat(i));
         }
         double rmse = IOUtils.computeRMSE(actual, expected);
-        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS);
+        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS_UNSCALED);
     }
 
     /**
      * This is a test of {@link FloatFFT_1D#realForward(float[])}.
      */
     @Test
-    public void testRealForward() {
+    public void testRealForward()
+    {
         final float[] actual = new float[2 * n];
         final float[] expected = new float[2 * n];
         for (int i = 0; i < n; i++) {
@@ -328,7 +343,7 @@ public class FloatFFT_1DTest {
         }
         fft.complexForward(expected);
         fft.realForward(actual);
-        if (!ConcurrencyUtils.isPowerOf2(n)) {
+        if (!CommonUtils.isPowerOf2(n)) {
             int m;
             if (n % 2 == 0) {
                 m = n / 2;
@@ -362,10 +377,10 @@ public class FloatFFT_1DTest {
      * This is a test of {@link FloatFFT_1D#realForward(FloatLargeArray)}.
      */
     @Test
-    public void testRealForwardLarge() {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final FloatLargeArray actual = new FloatLargeArray(2 * n, false);
-        final FloatLargeArray expected = new FloatLargeArray(2 * n, false);
+    public void testRealForwardLarge()
+    {
+        final FloatLargeArray actual = new FloatLargeArray(2 * n);
+        final FloatLargeArray expected = new FloatLargeArray(2 * n);
         for (int i = 0; i < n; i++) {
             actual.setFloat(i, 2.f * random.nextFloat() - 1.f);
             expected.setFloat(2 * i, actual.getFloat(i));
@@ -373,7 +388,7 @@ public class FloatFFT_1DTest {
         }
         fft.complexForward(expected);
         fft.realForward(actual);
-        if (!ConcurrencyUtils.isPowerOf2(n)) {
+        if (!CommonUtils.isPowerOf2(n)) {
             int m;
             if (n % 2 == 0) {
                 m = n / 2;
@@ -407,7 +422,8 @@ public class FloatFFT_1DTest {
      * This is a test of {@link FloatFFT_1D#realForward(float[])}.
      */
     @Test
-    public void testRealForwardFull() {
+    public void testRealForwardFull()
+    {
         final float[] actual = new float[2 * n];
         final float[] expected = new float[2 * n];
         for (int i = 0; i < n; i++) {
@@ -425,10 +441,10 @@ public class FloatFFT_1DTest {
      * This is a test of {@link FloatFFT_1D#realForward(FloatLargeArray)}.
      */
     @Test
-    public void testRealForwardFullLarge() {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final FloatLargeArray actual = new FloatLargeArray(2 * n, false);
-        final FloatLargeArray expected = new FloatLargeArray(2 * n, false);
+    public void testRealForwardFullLarge()
+    {
+        final FloatLargeArray actual = new FloatLargeArray(2 * n);
+        final FloatLargeArray expected = new FloatLargeArray(2 * n);
         for (int i = 0; i < n; i++) {
             actual.setFloat(i, 2.f * random.nextFloat() - 1.f);
             expected.setFloat(2 * i, actual.getFloat(i));
@@ -445,7 +461,8 @@ public class FloatFFT_1DTest {
      * with the second parameter set to <code>true</code>.
      */
     @Test
-    public void testRealInverseFullScaled() {
+    public void testRealInverseFullScaled()
+    {
         final float[] actual = new float[2 * n];
         final float[] expected = new float[2 * n];
         for (int i = 0; i < n; i++) {
@@ -465,10 +482,10 @@ public class FloatFFT_1DTest {
      * second parameter set to <code>true</code>.
      */
     @Test
-    public void testRealInverseFullScaledLarge() {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final FloatLargeArray actual = new FloatLargeArray(2 * n, false);
-        final FloatLargeArray expected = new FloatLargeArray(2 * n, false);
+    public void testRealInverseFullScaledLarge()
+    {
+        final FloatLargeArray actual = new FloatLargeArray(2 * n);
+        final FloatLargeArray expected = new FloatLargeArray(2 * n);
         for (int i = 0; i < n; i++) {
             actual.setFloat(i, 2.f * random.nextFloat() - 1.f);
             expected.setFloat(2 * i, actual.getFloat(i));
@@ -485,7 +502,8 @@ public class FloatFFT_1DTest {
      * with the second parameter set to <code>false</code>.
      */
     @Test
-    public void testRealInverseFullUnscaled() {
+    public void testRealInverseFullUnscaled()
+    {
         final float[] actual = new float[2 * n];
         final float[] expected = new float[2 * n];
         for (int i = 0; i < n; i++) {
@@ -496,7 +514,7 @@ public class FloatFFT_1DTest {
         fft.realInverseFull(actual, false);
         fft.complexInverse(expected, false);
         double rmse = IOUtils.computeRMSE(actual, expected);
-        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS);
+        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS_UNSCALED);
     }
 
     /**
@@ -505,10 +523,10 @@ public class FloatFFT_1DTest {
      * second parameter set to <code>false</code>.
      */
     @Test
-    public void testRealInverseFullUnscaledLarge() {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final FloatLargeArray actual = new FloatLargeArray(2 * n, false);
-        final FloatLargeArray expected = new FloatLargeArray(2 * n, false);
+    public void testRealInverseFullUnscaledLarge()
+    {
+        final FloatLargeArray actual = new FloatLargeArray(2 * n);
+        final FloatLargeArray expected = new FloatLargeArray(2 * n);
         for (int i = 0; i < n; i++) {
             actual.setFloat(i, 2.f * random.nextFloat() - 1.f);
             expected.setFloat(2 * i, actual.getFloat(i));
@@ -517,7 +535,7 @@ public class FloatFFT_1DTest {
         fft.realInverseFull(actual, false);
         fft.complexInverse(expected, false);
         double rmse = IOUtils.computeRMSE(actual, expected);
-        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS);
+        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS_UNSCALED);
     }
 
     /**
@@ -525,7 +543,8 @@ public class FloatFFT_1DTest {
      * the second parameter set to <code>true</code>.
      */
     @Test
-    public void testRealInverseScaled() {
+    public void testRealInverseScaled()
+    {
         final float[] actual = new float[n];
         final float[] expected = new float[n];
         for (int i = 0; i < n; i++) {
@@ -544,10 +563,10 @@ public class FloatFFT_1DTest {
      * second parameter set to <code>true</code>.
      */
     @Test
-    public void testRealInverseScaledLarge() {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final FloatLargeArray actual = new FloatLargeArray(n, false);
-        final FloatLargeArray expected = new FloatLargeArray(n, false);
+    public void testRealInverseScaledLarge()
+    {
+        final FloatLargeArray actual = new FloatLargeArray(n);
+        final FloatLargeArray expected = new FloatLargeArray(n);
         for (int i = 0; i < n; i++) {
             actual.setFloat(i, 2.f * random.nextFloat() - 1.f);
             expected.setFloat(i, actual.getFloat(i));
@@ -563,7 +582,8 @@ public class FloatFFT_1DTest {
      * the second parameter set to <code>false</code>.
      */
     @Test
-    public void testRealInverseUnscaled() {
+    public void testRealInverseUnscaled()
+    {
         final float[] actual = new float[n];
         final float[] expected = new float[n];
         for (int i = 0; i < n; i++) {
@@ -573,7 +593,7 @@ public class FloatFFT_1DTest {
         fft.realForward(actual);
         fft.realInverse(actual, false);
         float s;
-        if (ConcurrencyUtils.isPowerOf2(n) && n > 1) {
+        if (CommonUtils.isPowerOf2(n) && n > 1) {
             s = 2.f / (float) n;
         } else {
             s = 1.f / (float) n;
@@ -582,7 +602,7 @@ public class FloatFFT_1DTest {
             actual[i] = s * actual[i];
         }
         double rmse = IOUtils.computeRMSE(actual, expected);
-        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS);
+        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS_UNSCALED);
     }
 
     /**
@@ -591,10 +611,10 @@ public class FloatFFT_1DTest {
      * second parameter set to <code>false</code>.
      */
     @Test
-    public void testRealInverseUnscaledLarge() {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final FloatLargeArray actual = new FloatLargeArray(n, false);
-        final FloatLargeArray expected = new FloatLargeArray(n, false);
+    public void testRealInverseUnscaledLarge()
+    {
+        final FloatLargeArray actual = new FloatLargeArray(n);
+        final FloatLargeArray expected = new FloatLargeArray(n);
         for (int i = 0; i < n; i++) {
             actual.setFloat(i, 2.f * random.nextFloat() - 1.f);
             expected.setFloat(i, actual.getFloat(i));
@@ -602,7 +622,7 @@ public class FloatFFT_1DTest {
         fft.realForward(actual);
         fft.realInverse(actual, false);
         float s;
-        if (ConcurrencyUtils.isPowerOf2(n) && n > 1) {
+        if (CommonUtils.isPowerOf2(n) && n > 1) {
             s = 2.f / (float) n;
         } else {
             s = 1.f / (float) n;
@@ -611,6 +631,6 @@ public class FloatFFT_1DTest {
             actual.setFloat(i, s * actual.getFloat(i));
         }
         double rmse = IOUtils.computeRMSE(actual, expected);
-        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS);
+        Assert.assertEquals(String.format(DEFAULT_MESSAGE, numThreads, n) + ", rmse = " + rmse, 0.0, rmse, EPS_UNSCALED);
     }
 }

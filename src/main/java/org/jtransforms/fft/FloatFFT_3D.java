@@ -27,9 +27,15 @@
 package org.jtransforms.fft;
 
 import java.util.concurrent.Future;
-import org.jtransforms.utils.ConcurrencyUtils;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import pl.edu.icm.jlargearrays.FloatLargeArray;
-import pl.edu.icm.jlargearrays.Utilities;
+import pl.edu.icm.jlargearrays.LargeArray;
+import pl.edu.icm.jlargearrays.LargeArrayUtils;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * Computes 3D Discrete Fourier Transform (DFT) of complex and real, single
@@ -39,10 +45,11 @@ import pl.edu.icm.jlargearrays.Utilities;
  * <br>
  * Part of the code is derived from General Purpose FFT Package written by
  * Takuya Ooura (http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html)
- * 
+ *  
  * @author Piotr Wendykier (piotr.wendykier@gmail.com)
  */
-public class FloatFFT_3D {
+public class FloatFFT_3D
+{
 
     private int slices;
 
@@ -72,13 +79,14 @@ public class FloatFFT_3D {
 
     /**
      * Creates new instance of FloatFFT_3D.
-     * 
-     * @param slices number of slices
-     * @param rows number of rows
+     *  
+     * @param slices  number of slices
+     * @param rows    number of rows
      * @param columns number of columns
-     * 
+     *  
      */
-    public FloatFFT_3D(long slices, long rows, long columns) {
+    public FloatFFT_3D(long slices, long rows, long columns)
+    {
         if (slices <= 1 || rows <= 1 || columns <= 1) {
             throw new IllegalArgumentException("slices, rows and columns must be greater than 1");
         }
@@ -93,16 +101,13 @@ public class FloatFFT_3D {
         this.sliceStridel = rows * columns;
         this.rowStridel = columns;
 
-        if (slices * rows * columns >= ConcurrencyUtils.getThreadsBeginN_3D()) {
+        if (slices * rows * columns >= CommonUtils.getThreadsBeginN_3D()) {
             this.useThreads = true;
         }
-        if (ConcurrencyUtils.isPowerOf2(slices) && ConcurrencyUtils.isPowerOf2(rows) && ConcurrencyUtils.isPowerOf2(columns)) {
+        if (CommonUtils.isPowerOf2(slices) && CommonUtils.isPowerOf2(rows) && CommonUtils.isPowerOf2(columns)) {
             isPowerOfTwo = true;
         }
-        long largeArraysBenginN = ConcurrencyUtils.getLargeArraysBeginN();
-        if(slices * rows * columns > (1 << 28)) {
-            ConcurrencyUtils.setLargeArraysBeginN(Math.min(Math.min(rows, columns), slices));
-        }
+        CommonUtils.setUseLargeArrays(2 * slices * rows * columns > LargeArray.getMaxSizeOf32bitArray());
         fftSlices = new FloatFFT_1D(slices);
         if (slices == rows) {
             fftRows = fftSlices;
@@ -116,7 +121,6 @@ public class FloatFFT_3D {
         } else {
             fftColumns = new FloatFFT_1D(columns);
         }
-        ConcurrencyUtils.setLargeArraysBeginN(largeArraysBenginN);
     }
 
     /**
@@ -129,16 +133,17 @@ public class FloatFFT_3D {
      * float values in sequence: the real and imaginary part, i.e. the input
      * array must be of size slices*rows*2*columns. The physical layout of the
      * input data is as follows:
-     * 
-     *      * <pre>
+     *  
+     * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3],
      * a[k1*sliceStride + k2*rowStride + 2*k3+1] = Im[k1][k2][k3],
      * 0&lt;=k1&lt;slices, 0&lt;=k2&lt;rows, 0&lt;=k3&lt;columns,
      * </pre>
-     * 
+     *  
      * @param a data to transform
      */
-    public void complexForward(final float[] a) {
+    public void complexForward(final float[] a)
+    {
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
         if (isPowerOfTwo) {
             int oldn3 = columns;
@@ -164,8 +169,10 @@ public class FloatFFT_3D {
                 for (int l = 0; l < nthreads; l++) {
                     final int firstSlice = l * p;
                     final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
+                    futures[l] = ConcurrencyUtils.submit(new Runnable()
+                    {
+                        public void run()
+                        {
                             for (int s = firstSlice; s < lastSlice; s++) {
                                 int idx1 = s * sliceStride;
                                 for (int r = 0; r < rows; r++) {
@@ -175,14 +182,22 @@ public class FloatFFT_3D {
                         }
                     });
                 }
-                ConcurrencyUtils.waitForCompletion(futures);
+                try {
+                    ConcurrencyUtils.waitForCompletion(futures);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                }
 
                 for (int l = 0; l < nthreads; l++) {
                     final int firstSlice = l * p;
                     final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
 
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
+                    futures[l] = ConcurrencyUtils.submit(new Runnable()
+                    {
+                        public void run()
+                        {
                             float[] temp = new float[2 * rows];
                             for (int s = firstSlice; s < lastSlice; s++) {
                                 int idx1 = s * sliceStride;
@@ -206,15 +221,23 @@ public class FloatFFT_3D {
                         }
                     });
                 }
-                ConcurrencyUtils.waitForCompletion(futures);
+                try {
+                    ConcurrencyUtils.waitForCompletion(futures);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                }
 
                 p = rows / nthreads;
                 for (int l = 0; l < nthreads; l++) {
                     final int firstRow = l * p;
                     final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
 
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
+                    futures[l] = ConcurrencyUtils.submit(new Runnable()
+                    {
+                        public void run()
+                        {
                             float[] temp = new float[2 * slices];
                             for (int r = firstRow; r < lastRow; r++) {
                                 int idx1 = r * rowStride;
@@ -238,7 +261,13 @@ public class FloatFFT_3D {
                         }
                     });
                 }
-                ConcurrencyUtils.waitForCompletion(futures);
+                try {
+                    ConcurrencyUtils.waitForCompletion(futures);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                }
 
             } else {
                 for (int s = 0; s < slices; s++) {
@@ -305,169 +334,198 @@ public class FloatFFT_3D {
      * float values in sequence: the real and imaginary part, i.e. the input
      * array must be of size slices*rows*2*columns. The physical layout of the
      * input data is as follows:
-     * 
-     *      * <pre>
+     *  
+     * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3],
      * a[k1*sliceStride + k2*rowStride + 2*k3+1] = Im[k1][k2][k3],
      * 0&lt;=k1&lt;slices, 0&lt;=k2&lt;rows, 0&lt;=k3&lt;columns,
      * </pre>
-     * 
+     *  
      * @param a data to transform
      */
-    public void complexForward(final FloatLargeArray a) {
-        int nthreads = ConcurrencyUtils.getNumberOfThreads();
-        if (isPowerOfTwo) {
-            long oldn3 = columnsl;
-            columnsl = 2 * columnsl;
-            sliceStridel = rowsl * columnsl;
-            rowStridel = columnsl;
-            if ((nthreads > 1) && useThreads) {
-                xdft3da_subth2(0, -1, a, true);
-                cdft3db_subth(-1, a, true);
-            } else {
-                xdft3da_sub2(0, -1, a, true);
-                cdft3db_sub(-1, a, true);
-            }
-            columnsl = oldn3;
-            sliceStridel = rowsl * columnsl;
-            rowStridel = columnsl;
+    public void complexForward(final FloatLargeArray a)
+    {
+        if (!a.isLarge() && !a.isConstant()) {
+            complexForward(a.getData());
         } else {
-            sliceStridel = 2 * rowsl * columnsl;
-            rowStridel = 2 * columnsl;
-            if ((nthreads > 1) && useThreads && (slicesl >= nthreads) && (rowsl >= nthreads) && (columnsl >= nthreads)) {
-                Future<?>[] futures = new Future[nthreads];
-                long p = slicesl / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final long firstSlice = l * p;
-                    final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            for (long s = firstSlice; s < lastSlice; s++) {
-                                long idx1 = s * sliceStridel;
-                                for (long r = 0; r < rowsl; r++) {
-                                    fftColumns.complexForward(a, idx1 + r * rowStridel);
-                                }
-                            }
-                        }
-                    });
+            int nthreads = ConcurrencyUtils.getNumberOfThreads();
+            if (isPowerOfTwo) {
+                long oldn3 = columnsl;
+                columnsl = 2 * columnsl;
+                sliceStridel = rowsl * columnsl;
+                rowStridel = columnsl;
+                if ((nthreads > 1) && useThreads) {
+                    xdft3da_subth2(0, -1, a, true);
+                    cdft3db_subth(-1, a, true);
+                } else {
+                    xdft3da_sub2(0, -1, a, true);
+                    cdft3db_sub(-1, a, true);
                 }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                for (int l = 0; l < nthreads; l++) {
-                    final long firstSlice = l * p;
-                    final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            FloatLargeArray temp = new FloatLargeArray(2 * rowsl, false);
-                            for (long s = firstSlice; s < lastSlice; s++) {
-                                long idx1 = s * sliceStridel;
-                                for (long c = 0; c < columnsl; c++) {
-                                    long idx2 = 2 * c;
-                                    for (long r = 0; r < rowsl; r++) {
-                                        long idx3 = idx1 + idx2 + r * rowStridel;
-                                        long idx4 = 2 * r;
-                                        temp.setFloat(idx4, a.getFloat(idx3));
-                                        temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
-                                    }
-                                    fftRows.complexForward(temp);
-                                    for (long r = 0; r < rowsl; r++) {
-                                        long idx3 = idx1 + idx2 + r * rowStridel;
-                                        long idx4 = 2 * r;
-                                        a.setFloat(idx3, temp.getFloat(idx4));
-                                        a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                p = rowsl / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final long firstRow = l * p;
-                    final long lastRow = (l == (nthreads - 1)) ? rowsl : firstRow + p;
-
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            FloatLargeArray temp = new FloatLargeArray(2 * slicesl, false);
-                            for (long r = firstRow; r < lastRow; r++) {
-                                long idx1 = r * rowStridel;
-                                for (long c = 0; c < columnsl; c++) {
-                                    long idx2 = 2 * c;
-                                    for (long s = 0; s < slicesl; s++) {
-                                        long idx3 = s * sliceStridel + idx1 + idx2;
-                                        long idx4 = 2 * s;
-                                        temp.setFloat(idx4, a.getFloat(idx3));
-                                        temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
-                                    }
-                                    fftSlices.complexForward(temp);
-                                    for (long s = 0; s < slicesl; s++) {
-                                        long idx3 = s * sliceStridel + idx1 + idx2;
-                                        long idx4 = 2 * s;
-                                        a.setFloat(idx3, temp.getFloat(idx4));
-                                        a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
+                columnsl = oldn3;
+                sliceStridel = rowsl * columnsl;
+                rowStridel = columnsl;
             } else {
-                for (long s = 0; s < slicesl; s++) {
-                    long idx1 = s * sliceStridel;
+                sliceStridel = 2 * rowsl * columnsl;
+                rowStridel = 2 * columnsl;
+                if ((nthreads > 1) && useThreads && (slicesl >= nthreads) && (rowsl >= nthreads) && (columnsl >= nthreads)) {
+                    Future<?>[] futures = new Future[nthreads];
+                    long p = slicesl / nthreads;
+                    for (int l = 0; l < nthreads; l++) {
+                        final long firstSlice = l * p;
+                        final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
+                        futures[l] = ConcurrencyUtils.submit(new Runnable()
+                        {
+                            public void run()
+                            {
+                                for (long s = firstSlice; s < lastSlice; s++) {
+                                    long idx1 = s * sliceStridel;
+                                    for (long r = 0; r < rowsl; r++) {
+                                        fftColumns.complexForward(a, idx1 + r * rowStridel);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    try {
+                        ConcurrencyUtils.waitForCompletion(futures);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (ExecutionException ex) {
+                        Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+
+                    for (int l = 0; l < nthreads; l++) {
+                        final long firstSlice = l * p;
+                        final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
+
+                        futures[l] = ConcurrencyUtils.submit(new Runnable()
+                        {
+                            public void run()
+                            {
+                                FloatLargeArray temp = new FloatLargeArray(2 * rowsl, false);
+                                for (long s = firstSlice; s < lastSlice; s++) {
+                                    long idx1 = s * sliceStridel;
+                                    for (long c = 0; c < columnsl; c++) {
+                                        long idx2 = 2 * c;
+                                        for (long r = 0; r < rowsl; r++) {
+                                            long idx3 = idx1 + idx2 + r * rowStridel;
+                                            long idx4 = 2 * r;
+                                            temp.setFloat(idx4, a.getFloat(idx3));
+                                            temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
+                                        }
+                                        fftRows.complexForward(temp);
+                                        for (long r = 0; r < rowsl; r++) {
+                                            long idx3 = idx1 + idx2 + r * rowStridel;
+                                            long idx4 = 2 * r;
+                                            a.setFloat(idx3, temp.getFloat(idx4));
+                                            a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    try {
+                        ConcurrencyUtils.waitForCompletion(futures);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (ExecutionException ex) {
+                        Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+
+                    p = rowsl / nthreads;
+                    for (int l = 0; l < nthreads; l++) {
+                        final long firstRow = l * p;
+                        final long lastRow = (l == (nthreads - 1)) ? rowsl : firstRow + p;
+
+                        futures[l] = ConcurrencyUtils.submit(new Runnable()
+                        {
+                            public void run()
+                            {
+                                FloatLargeArray temp = new FloatLargeArray(2 * slicesl, false);
+                                for (long r = firstRow; r < lastRow; r++) {
+                                    long idx1 = r * rowStridel;
+                                    for (long c = 0; c < columnsl; c++) {
+                                        long idx2 = 2 * c;
+                                        for (long s = 0; s < slicesl; s++) {
+                                            long idx3 = s * sliceStridel + idx1 + idx2;
+                                            long idx4 = 2 * s;
+                                            temp.setFloat(idx4, a.getFloat(idx3));
+                                            temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
+                                        }
+                                        fftSlices.complexForward(temp);
+                                        for (long s = 0; s < slicesl; s++) {
+                                            long idx3 = s * sliceStridel + idx1 + idx2;
+                                            long idx4 = 2 * s;
+                                            a.setFloat(idx3, temp.getFloat(idx4));
+                                            a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    try {
+                        ConcurrencyUtils.waitForCompletion(futures);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (ExecutionException ex) {
+                        Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+
+                } else {
+                    for (long s = 0; s < slicesl; s++) {
+                        long idx1 = s * sliceStridel;
+                        for (long r = 0; r < rowsl; r++) {
+                            fftColumns.complexForward(a, idx1 + r * rowStridel);
+                        }
+                    }
+
+                    FloatLargeArray temp = new FloatLargeArray(2 * rowsl, false);
+                    for (long s = 0; s < slicesl; s++) {
+                        long idx1 = s * sliceStridel;
+                        for (long c = 0; c < columnsl; c++) {
+                            long idx2 = 2 * c;
+                            for (long r = 0; r < rowsl; r++) {
+                                long idx3 = idx1 + idx2 + r * rowStridel;
+                                long idx4 = 2 * r;
+                                temp.setFloat(idx4, a.getFloat(idx3));
+                                temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
+                            }
+                            fftRows.complexForward(temp);
+                            for (long r = 0; r < rowsl; r++) {
+                                long idx3 = idx1 + idx2 + r * rowStridel;
+                                long idx4 = 2 * r;
+                                a.setFloat(idx3, temp.getFloat(idx4));
+                                a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
+                            }
+                        }
+                    }
+
+                    temp = new FloatLargeArray(2 * slicesl, false);
                     for (long r = 0; r < rowsl; r++) {
-                        fftColumns.complexForward(a, idx1 + r * rowStridel);
-                    }
-                }
-
-                FloatLargeArray temp = new FloatLargeArray(2 * rowsl, false);
-                for (long s = 0; s < slicesl; s++) {
-                    long idx1 = s * sliceStridel;
-                    for (long c = 0; c < columnsl; c++) {
-                        long idx2 = 2 * c;
-                        for (long r = 0; r < rowsl; r++) {
-                            long idx3 = idx1 + idx2 + r * rowStridel;
-                            long idx4 = 2 * r;
-                            temp.setFloat(idx4, a.getFloat(idx3));
-                            temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
-                        }
-                        fftRows.complexForward(temp);
-                        for (long r = 0; r < rowsl; r++) {
-                            long idx3 = idx1 + idx2 + r * rowStridel;
-                            long idx4 = 2 * r;
-                            a.setFloat(idx3, temp.getFloat(idx4));
-                            a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
+                        long idx1 = r * rowStridel;
+                        for (long c = 0; c < columnsl; c++) {
+                            long idx2 = 2 * c;
+                            for (long s = 0; s < slicesl; s++) {
+                                long idx3 = s * sliceStridel + idx1 + idx2;
+                                long idx4 = 2 * s;
+                                temp.setFloat(idx4, a.getFloat(idx3));
+                                temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
+                            }
+                            fftSlices.complexForward(temp);
+                            for (long s = 0; s < slicesl; s++) {
+                                long idx3 = s * sliceStridel + idx1 + idx2;
+                                long idx4 = 2 * s;
+                                a.setFloat(idx3, temp.getFloat(idx4));
+                                a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
+                            }
                         }
                     }
                 }
-
-                temp = new FloatLargeArray(2 * slicesl, false);
-                for (long r = 0; r < rowsl; r++) {
-                    long idx1 = r * rowStridel;
-                    for (long c = 0; c < columnsl; c++) {
-                        long idx2 = 2 * c;
-                        for (long s = 0; s < slicesl; s++) {
-                            long idx3 = s * sliceStridel + idx1 + idx2;
-                            long idx4 = 2 * s;
-                            temp.setFloat(idx4, a.getFloat(idx3));
-                            temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
-                        }
-                        fftSlices.complexForward(temp);
-                        for (long s = 0; s < slicesl; s++) {
-                            long idx3 = s * sliceStridel + idx1 + idx2;
-                            long idx4 = 2 * s;
-                            a.setFloat(idx3, temp.getFloat(idx4));
-                            a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
-                        }
-                    }
-                }
+                sliceStridel = rowsl * columnsl;
+                rowStridel = columnsl;
             }
-            sliceStridel = rowsl * columnsl;
-            rowStridel = columnsl;
         }
     }
 
@@ -477,15 +535,16 @@ public class FloatFFT_3D {
      * represented by 2 float values in sequence: the real and imaginary part,
      * i.e. the input array must be of size slices by rows by 2*columns. The
      * physical layout of the input data is as follows:
-     * 
-     *      * <pre>
+     *  
+     * <pre>
      * a[k1][k2][2*k3] = Re[k1][k2][k3], a[k1][k2][2*k3+1] = Im[k1][k2][k3],
      * 0&lt;=k1&lt;slices, 0&lt;=k2&lt;rows, 0&lt;=k3&lt;columns,
      * </pre>
-     * 
+     *  
      * @param a data to transform
      */
-    public void complexForward(final float[][][] a) {
+    public void complexForward(final float[][][] a)
+    {
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
         if (isPowerOfTwo) {
             int oldn3 = columns;
@@ -504,122 +563,144 @@ public class FloatFFT_3D {
             columns = oldn3;
             sliceStride = rows * columns;
             rowStride = columns;
-        } else {
-            if ((nthreads > 1) && useThreads && (slices >= nthreads) && (rows >= nthreads) && (columns >= nthreads)) {
-                Future<?>[] futures = new Future[nthreads];
-                int p = slices / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstSlice = l * p;
-                    final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            for (int s = firstSlice; s < lastSlice; s++) {
+        } else if ((nthreads > 1) && useThreads && (slices >= nthreads) && (rows >= nthreads) && (columns >= nthreads)) {
+            Future<?>[] futures = new Future[nthreads];
+            int p = slices / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final int firstSlice = l * p;
+                final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        for (int s = firstSlice; s < lastSlice; s++) {
+                            for (int r = 0; r < rows; r++) {
+                                fftColumns.complexForward(a[s][r]);
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            for (int l = 0; l < nthreads; l++) {
+                final int firstSlice = l * p;
+                final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
+
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        float[] temp = new float[2 * rows];
+                        for (int s = firstSlice; s < lastSlice; s++) {
+                            for (int c = 0; c < columns; c++) {
+                                int idx2 = 2 * c;
                                 for (int r = 0; r < rows; r++) {
-                                    fftColumns.complexForward(a[s][r]);
+                                    int idx4 = 2 * r;
+                                    temp[idx4] = a[s][r][idx2];
+                                    temp[idx4 + 1] = a[s][r][idx2 + 1];
+                                }
+                                fftRows.complexForward(temp);
+                                for (int r = 0; r < rows; r++) {
+                                    int idx4 = 2 * r;
+                                    a[s][r][idx2] = temp[idx4];
+                                    a[s][r][idx2 + 1] = temp[idx4 + 1];
                                 }
                             }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstSlice = l * p;
-                    final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            float[] temp = new float[2 * rows];
-                            for (int s = firstSlice; s < lastSlice; s++) {
-                                for (int c = 0; c < columns; c++) {
-                                    int idx2 = 2 * c;
-                                    for (int r = 0; r < rows; r++) {
-                                        int idx4 = 2 * r;
-                                        temp[idx4] = a[s][r][idx2];
-                                        temp[idx4 + 1] = a[s][r][idx2 + 1];
-                                    }
-                                    fftRows.complexForward(temp);
-                                    for (int r = 0; r < rows; r++) {
-                                        int idx4 = 2 * r;
-                                        a[s][r][idx2] = temp[idx4];
-                                        a[s][r][idx2 + 1] = temp[idx4 + 1];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                p = rows / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstRow = l * p;
-                    final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
-
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            float[] temp = new float[2 * slices];
-                            for (int r = firstRow; r < lastRow; r++) {
-                                for (int c = 0; c < columns; c++) {
-                                    int idx2 = 2 * c;
-                                    for (int s = 0; s < slices; s++) {
-                                        int idx4 = 2 * s;
-                                        temp[idx4] = a[s][r][idx2];
-                                        temp[idx4 + 1] = a[s][r][idx2 + 1];
-                                    }
-                                    fftSlices.complexForward(temp);
-                                    for (int s = 0; s < slices; s++) {
-                                        int idx4 = 2 * s;
-                                        a[s][r][idx2] = temp[idx4];
-                                        a[s][r][idx2 + 1] = temp[idx4 + 1];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-            } else {
-                for (int s = 0; s < slices; s++) {
-                    for (int r = 0; r < rows; r++) {
-                        fftColumns.complexForward(a[s][r]);
-                    }
-                }
-
-                float[] temp = new float[2 * rows];
-                for (int s = 0; s < slices; s++) {
-                    for (int c = 0; c < columns; c++) {
-                        int idx2 = 2 * c;
-                        for (int r = 0; r < rows; r++) {
-                            int idx4 = 2 * r;
-                            temp[idx4] = a[s][r][idx2];
-                            temp[idx4 + 1] = a[s][r][idx2 + 1];
-                        }
-                        fftRows.complexForward(temp);
-                        for (int r = 0; r < rows; r++) {
-                            int idx4 = 2 * r;
-                            a[s][r][idx2] = temp[idx4];
-                            a[s][r][idx2 + 1] = temp[idx4 + 1];
                         }
                     }
-                }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
-                temp = new float[2 * slices];
+            p = rows / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final int firstRow = l * p;
+                final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
+
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        float[] temp = new float[2 * slices];
+                        for (int r = firstRow; r < lastRow; r++) {
+                            for (int c = 0; c < columns; c++) {
+                                int idx2 = 2 * c;
+                                for (int s = 0; s < slices; s++) {
+                                    int idx4 = 2 * s;
+                                    temp[idx4] = a[s][r][idx2];
+                                    temp[idx4 + 1] = a[s][r][idx2 + 1];
+                                }
+                                fftSlices.complexForward(temp);
+                                for (int s = 0; s < slices; s++) {
+                                    int idx4 = 2 * s;
+                                    a[s][r][idx2] = temp[idx4];
+                                    a[s][r][idx2 + 1] = temp[idx4 + 1];
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+        } else {
+            for (int s = 0; s < slices; s++) {
                 for (int r = 0; r < rows; r++) {
-                    for (int c = 0; c < columns; c++) {
-                        int idx2 = 2 * c;
-                        for (int s = 0; s < slices; s++) {
-                            int idx4 = 2 * s;
-                            temp[idx4] = a[s][r][idx2];
-                            temp[idx4 + 1] = a[s][r][idx2 + 1];
-                        }
-                        fftSlices.complexForward(temp);
-                        for (int s = 0; s < slices; s++) {
-                            int idx4 = 2 * s;
-                            a[s][r][idx2] = temp[idx4];
-                            a[s][r][idx2 + 1] = temp[idx4 + 1];
-                        }
+                    fftColumns.complexForward(a[s][r]);
+                }
+            }
+
+            float[] temp = new float[2 * rows];
+            for (int s = 0; s < slices; s++) {
+                for (int c = 0; c < columns; c++) {
+                    int idx2 = 2 * c;
+                    for (int r = 0; r < rows; r++) {
+                        int idx4 = 2 * r;
+                        temp[idx4] = a[s][r][idx2];
+                        temp[idx4 + 1] = a[s][r][idx2 + 1];
+                    }
+                    fftRows.complexForward(temp);
+                    for (int r = 0; r < rows; r++) {
+                        int idx4 = 2 * r;
+                        a[s][r][idx2] = temp[idx4];
+                        a[s][r][idx2 + 1] = temp[idx4 + 1];
+                    }
+                }
+            }
+
+            temp = new float[2 * slices];
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < columns; c++) {
+                    int idx2 = 2 * c;
+                    for (int s = 0; s < slices; s++) {
+                        int idx4 = 2 * s;
+                        temp[idx4] = a[s][r][idx2];
+                        temp[idx4 + 1] = a[s][r][idx2 + 1];
+                    }
+                    fftSlices.complexForward(temp);
+                    for (int s = 0; s < slices; s++) {
+                        int idx4 = 2 * s;
+                        a[s][r][idx2] = temp[idx4];
+                        a[s][r][idx2 + 1] = temp[idx4 + 1];
                     }
                 }
             }
@@ -636,17 +717,18 @@ public class FloatFFT_3D {
      * float values in sequence: the real and imaginary part, i.e. the input
      * array must be of size slices*rows*2*columns. The physical layout of the
      * input data is as follows:
-     * 
-     *      * <pre>
+     *  
+     * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3],
      * a[k1*sliceStride + k2*rowStride + 2*k3+1] = Im[k1][k2][k3],
      * 0&lt;=k1&lt;slices, 0&lt;=k2&lt;rows, 0&lt;=k3&lt;columns,
      * </pre>
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void complexInverse(final float[] a, final boolean scale) {
+    public void complexInverse(final float[] a, final boolean scale)
+    {
 
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
 
@@ -675,8 +757,10 @@ public class FloatFFT_3D {
                     final int firstSlice = l * p;
                     final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
 
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
+                    futures[l] = ConcurrencyUtils.submit(new Runnable()
+                    {
+                        public void run()
+                        {
                             for (int s = firstSlice; s < lastSlice; s++) {
                                 int idx1 = s * sliceStride;
                                 for (int r = 0; r < rows; r++) {
@@ -686,14 +770,22 @@ public class FloatFFT_3D {
                         }
                     });
                 }
-                ConcurrencyUtils.waitForCompletion(futures);
+                try {
+                    ConcurrencyUtils.waitForCompletion(futures);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                }
 
                 for (int l = 0; l < nthreads; l++) {
                     final int firstSlice = l * p;
                     final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
 
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
+                    futures[l] = ConcurrencyUtils.submit(new Runnable()
+                    {
+                        public void run()
+                        {
                             float[] temp = new float[2 * rows];
                             for (int s = firstSlice; s < lastSlice; s++) {
                                 int idx1 = s * sliceStride;
@@ -717,15 +809,23 @@ public class FloatFFT_3D {
                         }
                     });
                 }
-                ConcurrencyUtils.waitForCompletion(futures);
+                try {
+                    ConcurrencyUtils.waitForCompletion(futures);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                }
 
                 p = rows / nthreads;
                 for (int l = 0; l < nthreads; l++) {
                     final int firstRow = l * p;
                     final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
 
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
+                    futures[l] = ConcurrencyUtils.submit(new Runnable()
+                    {
+                        public void run()
+                        {
                             float[] temp = new float[2 * slices];
                             for (int r = firstRow; r < lastRow; r++) {
                                 int idx1 = r * rowStride;
@@ -749,7 +849,13 @@ public class FloatFFT_3D {
                         }
                     });
                 }
-                ConcurrencyUtils.waitForCompletion(futures);
+                try {
+                    ConcurrencyUtils.waitForCompletion(futures);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                }
 
             } else {
                 for (int s = 0; s < slices; s++) {
@@ -814,171 +920,199 @@ public class FloatFFT_3D {
      * float values in sequence: the real and imaginary part, i.e. the input
      * array must be of size slices*rows*2*columns. The physical layout of the
      * input data is as follows:
-     * 
-     *      * <pre>
+     *  
+     * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3],
      * a[k1*sliceStride + k2*rowStride + 2*k3+1] = Im[k1][k2][k3],
      * 0&lt;=k1&lt;slices, 0&lt;=k2&lt;rows, 0&lt;=k3&lt;columns,
      * </pre>
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void complexInverse(final FloatLargeArray a, final boolean scale) {
+    public void complexInverse(final FloatLargeArray a, final boolean scale)
+    {
 
-        int nthreads = ConcurrencyUtils.getNumberOfThreads();
-
-        if (isPowerOfTwo) {
-            long oldn3 = columnsl;
-            columnsl = 2 * columnsl;
-            sliceStridel = rowsl * columnsl;
-            rowStridel = columnsl;
-            if ((nthreads > 1) && useThreads) {
-                xdft3da_subth2(0, 1, a, scale);
-                cdft3db_subth(1, a, scale);
-            } else {
-                xdft3da_sub2(0, 1, a, scale);
-                cdft3db_sub(1, a, scale);
-            }
-            columnsl = oldn3;
-            sliceStridel = rowsl * columnsl;
-            rowStridel = columnsl;
+        if (!a.isLarge() && !a.isConstant()) {
+            complexInverse(a.getData(), scale);
         } else {
-            sliceStridel = 2 * rowsl * columnsl;
-            rowStridel = 2 * columnsl;
-            if ((nthreads > 1) && useThreads && (slicesl >= nthreads) && (rowsl >= nthreads) && (columnsl >= nthreads)) {
-                Future<?>[] futures = new Future[nthreads];
-                long p = slicesl / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final long firstSlice = l * p;
-                    final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            for (long s = firstSlice; s < lastSlice; s++) {
-                                long idx1 = s * sliceStridel;
-                                for (long r = 0; r < rowsl; r++) {
-                                    fftColumns.complexInverse(a, idx1 + r * rowStridel, scale);
-                                }
-                            }
-                        }
-                    });
+            int nthreads = ConcurrencyUtils.getNumberOfThreads();
+            if (isPowerOfTwo) {
+                long oldn3 = columnsl;
+                columnsl = 2 * columnsl;
+                sliceStridel = rowsl * columnsl;
+                rowStridel = columnsl;
+                if ((nthreads > 1) && useThreads) {
+                    xdft3da_subth2(0, 1, a, scale);
+                    cdft3db_subth(1, a, scale);
+                } else {
+                    xdft3da_sub2(0, 1, a, scale);
+                    cdft3db_sub(1, a, scale);
                 }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                for (int l = 0; l < nthreads; l++) {
-                    final long firstSlice = l * p;
-                    final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            FloatLargeArray temp = new FloatLargeArray(2 * rowsl, false);
-                            for (long s = firstSlice; s < lastSlice; s++) {
-                                long idx1 = s * sliceStridel;
-                                for (long c = 0; c < columnsl; c++) {
-                                    long idx2 = 2 * c;
-                                    for (long r = 0; r < rowsl; r++) {
-                                        long idx3 = idx1 + idx2 + r * rowStridel;
-                                        long idx4 = 2 * r;
-                                        temp.setFloat(idx4, a.getFloat(idx3));
-                                        temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
-                                    }
-                                    fftRows.complexInverse(temp, scale);
-                                    for (long r = 0; r < rowsl; r++) {
-                                        long idx3 = idx1 + idx2 + r * rowStridel;
-                                        long idx4 = 2 * r;
-                                        a.setFloat(idx3, temp.getFloat(idx4));
-                                        a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                p = rowsl / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final long firstRow = l * p;
-                    final long lastRow = (l == (nthreads - 1)) ? rowsl : firstRow + p;
-
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            FloatLargeArray temp = new FloatLargeArray(2 * slicesl, false);
-                            for (long r = firstRow; r < lastRow; r++) {
-                                long idx1 = r * rowStridel;
-                                for (long c = 0; c < columnsl; c++) {
-                                    long idx2 = 2 * c;
-                                    for (long s = 0; s < slicesl; s++) {
-                                        long idx3 = s * sliceStridel + idx1 + idx2;
-                                        long idx4 = 2 * s;
-                                        temp.setFloat(idx4, a.getFloat(idx3));
-                                        temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
-                                    }
-                                    fftSlices.complexInverse(temp, scale);
-                                    for (long s = 0; s < slicesl; s++) {
-                                        long idx3 = s * sliceStridel + idx1 + idx2;
-                                        long idx4 = 2 * s;
-                                        a.setFloat(idx3, temp.getFloat(idx4));
-                                        a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
+                columnsl = oldn3;
+                sliceStridel = rowsl * columnsl;
+                rowStridel = columnsl;
             } else {
-                for (long s = 0; s < slicesl; s++) {
-                    long idx1 = s * sliceStridel;
+                sliceStridel = 2 * rowsl * columnsl;
+                rowStridel = 2 * columnsl;
+                if ((nthreads > 1) && useThreads && (slicesl >= nthreads) && (rowsl >= nthreads) && (columnsl >= nthreads)) {
+                    Future<?>[] futures = new Future[nthreads];
+                    long p = slicesl / nthreads;
+                    for (int l = 0; l < nthreads; l++) {
+                        final long firstSlice = l * p;
+                        final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
+
+                        futures[l] = ConcurrencyUtils.submit(new Runnable()
+                        {
+                            public void run()
+                            {
+                                for (long s = firstSlice; s < lastSlice; s++) {
+                                    long idx1 = s * sliceStridel;
+                                    for (long r = 0; r < rowsl; r++) {
+                                        fftColumns.complexInverse(a, idx1 + r * rowStridel, scale);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    try {
+                        ConcurrencyUtils.waitForCompletion(futures);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (ExecutionException ex) {
+                        Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+
+                    for (int l = 0; l < nthreads; l++) {
+                        final long firstSlice = l * p;
+                        final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
+
+                        futures[l] = ConcurrencyUtils.submit(new Runnable()
+                        {
+                            public void run()
+                            {
+                                FloatLargeArray temp = new FloatLargeArray(2 * rowsl, false);
+                                for (long s = firstSlice; s < lastSlice; s++) {
+                                    long idx1 = s * sliceStridel;
+                                    for (long c = 0; c < columnsl; c++) {
+                                        long idx2 = 2 * c;
+                                        for (long r = 0; r < rowsl; r++) {
+                                            long idx3 = idx1 + idx2 + r * rowStridel;
+                                            long idx4 = 2 * r;
+                                            temp.setFloat(idx4, a.getFloat(idx3));
+                                            temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
+                                        }
+                                        fftRows.complexInverse(temp, scale);
+                                        for (long r = 0; r < rowsl; r++) {
+                                            long idx3 = idx1 + idx2 + r * rowStridel;
+                                            long idx4 = 2 * r;
+                                            a.setFloat(idx3, temp.getFloat(idx4));
+                                            a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    try {
+                        ConcurrencyUtils.waitForCompletion(futures);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (ExecutionException ex) {
+                        Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+
+                    p = rowsl / nthreads;
+                    for (int l = 0; l < nthreads; l++) {
+                        final long firstRow = l * p;
+                        final long lastRow = (l == (nthreads - 1)) ? rowsl : firstRow + p;
+
+                        futures[l] = ConcurrencyUtils.submit(new Runnable()
+                        {
+                            public void run()
+                            {
+                                FloatLargeArray temp = new FloatLargeArray(2 * slicesl, false);
+                                for (long r = firstRow; r < lastRow; r++) {
+                                    long idx1 = r * rowStridel;
+                                    for (long c = 0; c < columnsl; c++) {
+                                        long idx2 = 2 * c;
+                                        for (long s = 0; s < slicesl; s++) {
+                                            long idx3 = s * sliceStridel + idx1 + idx2;
+                                            long idx4 = 2 * s;
+                                            temp.setFloat(idx4, a.getFloat(idx3));
+                                            temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
+                                        }
+                                        fftSlices.complexInverse(temp, scale);
+                                        for (long s = 0; s < slicesl; s++) {
+                                            long idx3 = s * sliceStridel + idx1 + idx2;
+                                            long idx4 = 2 * s;
+                                            a.setFloat(idx3, temp.getFloat(idx4));
+                                            a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    try {
+                        ConcurrencyUtils.waitForCompletion(futures);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (ExecutionException ex) {
+                        Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+
+                } else {
+                    for (long s = 0; s < slicesl; s++) {
+                        long idx1 = s * sliceStridel;
+                        for (long r = 0; r < rowsl; r++) {
+                            fftColumns.complexInverse(a, idx1 + r * rowStridel, scale);
+                        }
+                    }
+                    FloatLargeArray temp = new FloatLargeArray(2 * rowsl, false);
+                    for (long s = 0; s < slicesl; s++) {
+                        long idx1 = s * sliceStridel;
+                        for (long c = 0; c < columnsl; c++) {
+                            long idx2 = 2 * c;
+                            for (long r = 0; r < rowsl; r++) {
+                                long idx3 = idx1 + idx2 + r * rowStridel;
+                                long idx4 = 2 * r;
+                                temp.setFloat(idx4, a.getFloat(idx3));
+                                temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
+                            }
+                            fftRows.complexInverse(temp, scale);
+                            for (long r = 0; r < rowsl; r++) {
+                                long idx3 = idx1 + idx2 + r * rowStridel;
+                                long idx4 = 2 * r;
+                                a.setFloat(idx3, temp.getFloat(idx4));
+                                a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
+                            }
+                        }
+                    }
+                    temp = new FloatLargeArray(2 * slicesl, false);
                     for (long r = 0; r < rowsl; r++) {
-                        fftColumns.complexInverse(a, idx1 + r * rowStridel, scale);
-                    }
-                }
-                FloatLargeArray temp = new FloatLargeArray(2 * rowsl, false);
-                for (long s = 0; s < slicesl; s++) {
-                    long idx1 = s * sliceStridel;
-                    for (long c = 0; c < columnsl; c++) {
-                        long idx2 = 2 * c;
-                        for (long r = 0; r < rowsl; r++) {
-                            long idx3 = idx1 + idx2 + r * rowStridel;
-                            long idx4 = 2 * r;
-                            temp.setFloat(idx4, a.getFloat(idx3));
-                            temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
-                        }
-                        fftRows.complexInverse(temp, scale);
-                        for (long r = 0; r < rowsl; r++) {
-                            long idx3 = idx1 + idx2 + r * rowStridel;
-                            long idx4 = 2 * r;
-                            a.setFloat(idx3, temp.getFloat(idx4));
-                            a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
+                        long idx1 = r * rowStridel;
+                        for (long c = 0; c < columnsl; c++) {
+                            long idx2 = 2 * c;
+                            for (long s = 0; s < slicesl; s++) {
+                                long idx3 = s * sliceStridel + idx1 + idx2;
+                                long idx4 = 2 * s;
+                                temp.setFloat(idx4, a.getFloat(idx3));
+                                temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
+                            }
+                            fftSlices.complexInverse(temp, scale);
+                            for (long s = 0; s < slicesl; s++) {
+                                long idx3 = s * sliceStridel + idx1 + idx2;
+                                long idx4 = 2 * s;
+                                a.setFloat(idx3, temp.getFloat(idx4));
+                                a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
+                            }
                         }
                     }
                 }
-                temp = new FloatLargeArray(2 * slicesl, false);
-                for (long r = 0; r < rowsl; r++) {
-                    long idx1 = r * rowStridel;
-                    for (long c = 0; c < columnsl; c++) {
-                        long idx2 = 2 * c;
-                        for (long s = 0; s < slicesl; s++) {
-                            long idx3 = s * sliceStridel + idx1 + idx2;
-                            long idx4 = 2 * s;
-                            temp.setFloat(idx4, a.getFloat(idx3));
-                            temp.setFloat(idx4 + 1, a.getFloat(idx3 + 1));
-                        }
-                        fftSlices.complexInverse(temp, scale);
-                        for (long s = 0; s < slicesl; s++) {
-                            long idx3 = s * sliceStridel + idx1 + idx2;
-                            long idx4 = 2 * s;
-                            a.setFloat(idx3, temp.getFloat(idx4));
-                            a.setFloat(idx3 + 1, temp.getFloat(idx4 + 1));
-                        }
-                    }
-                }
+                sliceStridel = rowsl * columnsl;
+                rowStridel = columnsl;
             }
-            sliceStridel = rowsl * columnsl;
-            rowStridel = columnsl;
         }
     }
 
@@ -988,16 +1122,17 @@ public class FloatFFT_3D {
      * represented by 2 float values in sequence: the real and imaginary part,
      * i.e. the input array must be of size slices by rows by 2*columns. The
      * physical layout of the input data is as follows:
-     * 
-     *      * <pre>
+     *  
+     * <pre>
      * a[k1][k2][2*k3] = Re[k1][k2][k3], a[k1][k2][2*k3+1] = Im[k1][k2][k3],
      * 0&lt;=k1&lt;slices, 0&lt;=k2&lt;rows, 0&lt;=k3&lt;columns,
      * </pre>
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void complexInverse(final float[][][] a, final boolean scale) {
+    public void complexInverse(final float[][][] a, final boolean scale)
+    {
         int nthreads = ConcurrencyUtils.getNumberOfThreads();
         if (isPowerOfTwo) {
             int oldn3 = columns;
@@ -1014,121 +1149,143 @@ public class FloatFFT_3D {
             columns = oldn3;
             sliceStride = rows * columns;
             rowStride = columns;
-        } else {
-            if ((nthreads > 1) && useThreads && (slices >= nthreads) && (rows >= nthreads) && (columns >= nthreads)) {
-                Future<?>[] futures = new Future[nthreads];
-                int p = slices / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstSlice = l * p;
-                    final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
+        } else if ((nthreads > 1) && useThreads && (slices >= nthreads) && (rows >= nthreads) && (columns >= nthreads)) {
+            Future<?>[] futures = new Future[nthreads];
+            int p = slices / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final int firstSlice = l * p;
+                final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
 
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            for (int s = firstSlice; s < lastSlice; s++) {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        for (int s = firstSlice; s < lastSlice; s++) {
+                            for (int r = 0; r < rows; r++) {
+                                fftColumns.complexInverse(a[s][r], scale);
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            for (int l = 0; l < nthreads; l++) {
+                final int firstSlice = l * p;
+                final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
+
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        float[] temp = new float[2 * rows];
+                        for (int s = firstSlice; s < lastSlice; s++) {
+                            for (int c = 0; c < columns; c++) {
+                                int idx2 = 2 * c;
                                 for (int r = 0; r < rows; r++) {
-                                    fftColumns.complexInverse(a[s][r], scale);
+                                    int idx4 = 2 * r;
+                                    temp[idx4] = a[s][r][idx2];
+                                    temp[idx4 + 1] = a[s][r][idx2 + 1];
+                                }
+                                fftRows.complexInverse(temp, scale);
+                                for (int r = 0; r < rows; r++) {
+                                    int idx4 = 2 * r;
+                                    a[s][r][idx2] = temp[idx4];
+                                    a[s][r][idx2 + 1] = temp[idx4 + 1];
                                 }
                             }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstSlice = l * p;
-                    final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            float[] temp = new float[2 * rows];
-                            for (int s = firstSlice; s < lastSlice; s++) {
-                                for (int c = 0; c < columns; c++) {
-                                    int idx2 = 2 * c;
-                                    for (int r = 0; r < rows; r++) {
-                                        int idx4 = 2 * r;
-                                        temp[idx4] = a[s][r][idx2];
-                                        temp[idx4 + 1] = a[s][r][idx2 + 1];
-                                    }
-                                    fftRows.complexInverse(temp, scale);
-                                    for (int r = 0; r < rows; r++) {
-                                        int idx4 = 2 * r;
-                                        a[s][r][idx2] = temp[idx4];
-                                        a[s][r][idx2 + 1] = temp[idx4 + 1];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-                p = rows / nthreads;
-                for (int l = 0; l < nthreads; l++) {
-                    final int firstRow = l * p;
-                    final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
-
-                    futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                        public void run() {
-                            float[] temp = new float[2 * slices];
-                            for (int r = firstRow; r < lastRow; r++) {
-                                for (int c = 0; c < columns; c++) {
-                                    int idx2 = 2 * c;
-                                    for (int s = 0; s < slices; s++) {
-                                        int idx4 = 2 * s;
-                                        temp[idx4] = a[s][r][idx2];
-                                        temp[idx4 + 1] = a[s][r][idx2 + 1];
-                                    }
-                                    fftSlices.complexInverse(temp, scale);
-                                    for (int s = 0; s < slices; s++) {
-                                        int idx4 = 2 * s;
-                                        a[s][r][idx2] = temp[idx4];
-                                        a[s][r][idx2 + 1] = temp[idx4 + 1];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                ConcurrencyUtils.waitForCompletion(futures);
-
-            } else {
-                for (int s = 0; s < slices; s++) {
-                    for (int r = 0; r < rows; r++) {
-                        fftColumns.complexInverse(a[s][r], scale);
-                    }
-                }
-                float[] temp = new float[2 * rows];
-                for (int s = 0; s < slices; s++) {
-                    for (int c = 0; c < columns; c++) {
-                        int idx2 = 2 * c;
-                        for (int r = 0; r < rows; r++) {
-                            int idx4 = 2 * r;
-                            temp[idx4] = a[s][r][idx2];
-                            temp[idx4 + 1] = a[s][r][idx2 + 1];
-                        }
-                        fftRows.complexInverse(temp, scale);
-                        for (int r = 0; r < rows; r++) {
-                            int idx4 = 2 * r;
-                            a[s][r][idx2] = temp[idx4];
-                            a[s][r][idx2 + 1] = temp[idx4 + 1];
                         }
                     }
-                }
-                temp = new float[2 * slices];
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            p = rows / nthreads;
+            for (int l = 0; l < nthreads; l++) {
+                final int firstRow = l * p;
+                final int lastRow = (l == (nthreads - 1)) ? rows : firstRow + p;
+
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        float[] temp = new float[2 * slices];
+                        for (int r = firstRow; r < lastRow; r++) {
+                            for (int c = 0; c < columns; c++) {
+                                int idx2 = 2 * c;
+                                for (int s = 0; s < slices; s++) {
+                                    int idx4 = 2 * s;
+                                    temp[idx4] = a[s][r][idx2];
+                                    temp[idx4 + 1] = a[s][r][idx2 + 1];
+                                }
+                                fftSlices.complexInverse(temp, scale);
+                                for (int s = 0; s < slices; s++) {
+                                    int idx4 = 2 * s;
+                                    a[s][r][idx2] = temp[idx4];
+                                    a[s][r][idx2 + 1] = temp[idx4 + 1];
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+        } else {
+            for (int s = 0; s < slices; s++) {
                 for (int r = 0; r < rows; r++) {
-                    for (int c = 0; c < columns; c++) {
-                        int idx2 = 2 * c;
-                        for (int s = 0; s < slices; s++) {
-                            int idx4 = 2 * s;
-                            temp[idx4] = a[s][r][idx2];
-                            temp[idx4 + 1] = a[s][r][idx2 + 1];
-                        }
-                        fftSlices.complexInverse(temp, scale);
-                        for (int s = 0; s < slices; s++) {
-                            int idx4 = 2 * s;
-                            a[s][r][idx2] = temp[idx4];
-                            a[s][r][idx2 + 1] = temp[idx4 + 1];
-                        }
+                    fftColumns.complexInverse(a[s][r], scale);
+                }
+            }
+            float[] temp = new float[2 * rows];
+            for (int s = 0; s < slices; s++) {
+                for (int c = 0; c < columns; c++) {
+                    int idx2 = 2 * c;
+                    for (int r = 0; r < rows; r++) {
+                        int idx4 = 2 * r;
+                        temp[idx4] = a[s][r][idx2];
+                        temp[idx4 + 1] = a[s][r][idx2 + 1];
+                    }
+                    fftRows.complexInverse(temp, scale);
+                    for (int r = 0; r < rows; r++) {
+                        int idx4 = 2 * r;
+                        a[s][r][idx2] = temp[idx4];
+                        a[s][r][idx2 + 1] = temp[idx4 + 1];
+                    }
+                }
+            }
+            temp = new float[2 * slices];
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < columns; c++) {
+                    int idx2 = 2 * c;
+                    for (int s = 0; s < slices; s++) {
+                        int idx4 = 2 * s;
+                        temp[idx4] = a[s][r][idx2];
+                        temp[idx4 + 1] = a[s][r][idx2 + 1];
+                    }
+                    fftSlices.complexInverse(temp, scale);
+                    for (int s = 0; s < slices; s++) {
+                        int idx4 = 2 * s;
+                        a[s][r][idx2] = temp[idx4];
+                        a[s][r][idx2 + 1] = temp[idx4 + 1];
                     }
                 }
             }
@@ -1144,8 +1301,8 @@ public class FloatFFT_3D {
      * a[i*sliceStride + j*rowStride + k], where sliceStride = rows * 2 *
      * columns and rowStride = 2 * columns. The physical layout of the output
      * data is as follows:
-     * 
-     *      * <pre>
+     *  
+     * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3] =
      * Re[(slices-k1)%slices][(rows-k2)%rows][columns-k3], a[k1*sliceStride +
      * k2*rowStride + 2*k3+1] = Im[k1][k2][k3] =
@@ -1177,16 +1334,17 @@ public class FloatFFT_3D {
      * a[(slices/2)*sliceStride + (rows/2)*rowStride + 1] =
      * Re[slices/2][rows/2][columns/2]
      * </pre>
-     * 
-     * 
+     *  
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * 
+     *  
      * @param a data to transform
      */
-    public void realForward(float[] a) {
+    public void realForward(float[] a)
+    {
         if (isPowerOfTwo == false) {
             throw new IllegalArgumentException("slices, rows and columns must be power of two numbers");
         } else {
@@ -1212,8 +1370,8 @@ public class FloatFFT_3D {
      * a[i*sliceStride + j*rowStride + k], where sliceStride = rows * 2 *
      * columns and rowStride = 2 * columns. The physical layout of the output
      * data is as follows:
-     * 
-     *      * <pre>
+     *  
+     * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3] =
      * Re[(slices-k1)%slices][(rows-k2)%rows][columns-k3], a[k1*sliceStride +
      * k2*rowStride + 2*k3+1] = Im[k1][k2][k3] =
@@ -1245,16 +1403,17 @@ public class FloatFFT_3D {
      * a[(slices/2)*sliceStride + (rows/2)*rowStride + 1] =
      * Re[slices/2][rows/2][columns/2]
      * </pre>
-     * 
-     * 
+     *  
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * 
+     *  
      * @param a data to transform
      */
-    public void realForward(FloatLargeArray a) {
+    public void realForward(FloatLargeArray a)
+    {
         if (isPowerOfTwo == false) {
             throw new IllegalArgumentException("slices, rows and columns must be power of two numbers");
         } else {
@@ -1276,8 +1435,8 @@ public class FloatFFT_3D {
      * . This method only works when the sizes of all three dimensions are
      * power-of-two numbers. The data is stored in a 3D array. The physical
      * layout of the output data is as follows:
-     * 
-     *      * <pre>
+     *  
+     * <pre>
      * a[k1][k2][2*k3] = Re[k1][k2][k3] =
      * Re[(slices-k1)%slices][(rows-k2)%rows][columns-k3], a[k1][k2][2*k3+1] =
      * Im[k1][k2][k3] = -Im[(slices-k1)%slices][(rows-k2)%rows][columns-k3],
@@ -1303,16 +1462,17 @@ public class FloatFFT_3D {
      * Re[slices/2][rows/2][0], a[slices/2][rows/2][1] =
      * Re[slices/2][rows/2][columns/2]
      * </pre>
-     * 
-     * 
+     *  
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * forward transform, use <code>realForwardFull</code>. To get back the
      * original data, use <code>realInverse</code> on the output of this method.
-     * 
+     *  
      * @param a data to transform
      */
-    public void realForward(float[][][] a) {
+    public void realForward(float[][][] a)
+    {
         if (isPowerOfTwo == false) {
             throw new IllegalArgumentException("slices, rows and columns must be power of two numbers");
         } else {
@@ -1338,10 +1498,11 @@ public class FloatFFT_3D {
      * slices*rows*columns elements filled with real data. To get back the
      * original data, use <code>complexInverse</code> on the output of this
      * method.
-     * 
+     *  
      * @param a data to transform
      */
-    public void realForwardFull(float[] a) {
+    public void realForwardFull(float[] a)
+    {
         if (isPowerOfTwo) {
             int nthreads = ConcurrencyUtils.getNumberOfThreads();
             if ((nthreads > 1) && useThreads) {
@@ -1368,10 +1529,11 @@ public class FloatFFT_3D {
      * slices*rows*columns elements filled with real data. To get back the
      * original data, use <code>complexInverse</code> on the output of this
      * method.
-     * 
+     *  
      * @param a data to transform
      */
-    public void realForwardFull(FloatLargeArray a) {
+    public void realForwardFull(FloatLargeArray a)
+    {
         if (isPowerOfTwo) {
             int nthreads = ConcurrencyUtils.getNumberOfThreads();
             if ((nthreads > 1) && useThreads) {
@@ -1398,10 +1560,11 @@ public class FloatFFT_3D {
      * slices by rows by columns elements filled with real data. To get back the
      * original data, use <code>complexInverse</code> on the output of this
      * method.
-     * 
+     *  
      * @param a data to transform
      */
-    public void realForwardFull(float[][][] a) {
+    public void realForwardFull(float[][][] a)
+    {
         if (isPowerOfTwo) {
             int nthreads = ConcurrencyUtils.getNumberOfThreads();
             if ((nthreads > 1) && useThreads) {
@@ -1428,8 +1591,8 @@ public class FloatFFT_3D {
      * a[i*sliceStride + j*rowStride + k], where sliceStride = rows * 2 *
      * columns and rowStride = 2 * columns. The physical layout of the input
      * data has to be as follows:
-     * 
-     *      * <pre>
+     *  
+     * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3] =
      * Re[(slices-k1)%slices][(rows-k2)%rows][columns-k3], a[k1*sliceStride +
      * k2*rowStride + 2*k3+1] = Im[k1][k2][k3] =
@@ -1461,16 +1624,17 @@ public class FloatFFT_3D {
      * a[(slices/2)*sliceStride + (rows/2)*rowStride + 1] =
      * Re[slices/2][rows/2][columns/2]
      * </pre>
-     * 
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * 
-     * @param a data to transform
-     * 
+     *  
+     * @param a     data to transform
+     *  
      * @param scale if true then scaling is performed
      */
-    public void realInverse(float[] a, boolean scale) {
+    public void realInverse(float[] a, boolean scale)
+    {
         if (isPowerOfTwo == false) {
             throw new IllegalArgumentException("slices, rows and columns must be power of two numbers");
         } else {
@@ -1496,8 +1660,8 @@ public class FloatFFT_3D {
      * a[i*sliceStride + j*rowStride + k], where sliceStride = rows * 2 *
      * columns and rowStride = 2 * columns. The physical layout of the input
      * data has to be as follows:
-     * 
-     *      * <pre>
+     *  
+     * <pre>
      * a[k1*sliceStride + k2*rowStride + 2*k3] = Re[k1][k2][k3] =
      * Re[(slices-k1)%slices][(rows-k2)%rows][columns-k3], a[k1*sliceStride +
      * k2*rowStride + 2*k3+1] = Im[k1][k2][k3] =
@@ -1529,16 +1693,17 @@ public class FloatFFT_3D {
      * a[(slices/2)*sliceStride + (rows/2)*rowStride + 1] =
      * Re[slices/2][rows/2][columns/2]
      * </pre>
-     * 
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * 
-     * @param a data to transform
-     * 
+     *  
+     * @param a     data to transform
+     *  
      * @param scale if true then scaling is performed
      */
-    public void realInverse(FloatLargeArray a, boolean scale) {
+    public void realInverse(FloatLargeArray a, boolean scale)
+    {
         if (isPowerOfTwo == false) {
             throw new IllegalArgumentException("slices, rows and columns must be power of two numbers");
         } else {
@@ -1560,8 +1725,8 @@ public class FloatFFT_3D {
      * . This method only works when the sizes of all three dimensions are
      * power-of-two numbers. The data is stored in a 3D array. The physical
      * layout of the input data has to be as follows:
-     * 
-     *      * <pre>
+     *  
+     * <pre>
      * a[k1][k2][2*k3] = Re[k1][k2][k3] =
      * Re[(slices-k1)%slices][(rows-k2)%rows][columns-k3], a[k1][k2][2*k3+1] =
      * Im[k1][k2][k3] = -Im[(slices-k1)%slices][(rows-k2)%rows][columns-k3],
@@ -1587,16 +1752,17 @@ public class FloatFFT_3D {
      * Re[slices/2][rows/2][0], a[slices/2][rows/2][1] =
      * Re[slices/2][rows/2][columns/2]
      * </pre>
-     * 
+     *  
      * This method computes only half of the elements of the real transform. The
      * other half satisfies the symmetry condition. If you want the full real
      * inverse transform, use <code>realInverseFull</code>.
-     * 
-     * @param a data to transform
-     * 
+     *  
+     * @param a     data to transform
+     *  
      * @param scale if true then scaling is performed
      */
-    public void realInverse(float[][][] a, boolean scale) {
+    public void realInverse(float[][][] a, boolean scale)
+    {
         if (isPowerOfTwo == false) {
             throw new IllegalArgumentException("slices, rows and columns must be power of two numbers");
         } else {
@@ -1620,11 +1786,12 @@ public class FloatFFT_3D {
      * part equal 0. Because the result is stored in <code>a</code>, the input
      * array must be of size slices*rows*2*columns, with only the first
      * slices*rows*columns elements filled with real data.
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void realInverseFull(float[] a, boolean scale) {
+    public void realInverseFull(float[] a, boolean scale)
+    {
         if (isPowerOfTwo) {
             int nthreads = ConcurrencyUtils.getNumberOfThreads();
             if ((nthreads > 1) && useThreads) {
@@ -1649,11 +1816,12 @@ public class FloatFFT_3D {
      * part equal 0. Because the result is stored in <code>a</code>, the input
      * array must be of size slices*rows*2*columns, with only the first
      * slices*rows*columns elements filled with real data.
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void realInverseFull(FloatLargeArray a, boolean scale) {
+    public void realInverseFull(FloatLargeArray a, boolean scale)
+    {
         if (isPowerOfTwo) {
             int nthreads = ConcurrencyUtils.getNumberOfThreads();
             if ((nthreads > 1) && useThreads) {
@@ -1678,11 +1846,12 @@ public class FloatFFT_3D {
      * part equal 0. Because the result is stored in <code>a</code>, the input
      * array must be of size slices by rows by 2*columns, with only the first
      * slices by rows by columns elements filled with real data.
-     * 
-     * @param a data to transform
+     *  
+     * @param a     data to transform
      * @param scale if true then scaling is performed
      */
-    public void realInverseFull(float[][][] a, boolean scale) {
+    public void realInverseFull(float[][][] a, boolean scale)
+    {
         if (isPowerOfTwo) {
             int nthreads = ConcurrencyUtils.getNumberOfThreads();
             if ((nthreads > 1) && useThreads) {
@@ -1701,7 +1870,8 @@ public class FloatFFT_3D {
     }
 
     /* -------- child routines -------- */
-    private void mixedRadixRealForwardFull(final float[][][] a) {
+    private void mixedRadixRealForwardFull(final float[][][] a)
+    {
         float[] temp = new float[2 * rows];
         int ldimn2 = rows / 2 + 1;
         final int newn3 = 2 * columns;
@@ -1720,8 +1890,10 @@ public class FloatFFT_3D {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
 
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int s = firstSlice; s < lastSlice; s++) {
                             for (int r = 0; r < rows; r++) {
                                 fftColumns.realForwardFull(a[s][r]);
@@ -1730,14 +1902,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
 
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         float[] temp = new float[2 * rows];
 
                         for (int s = firstSlice; s < lastSlice; s++) {
@@ -1759,15 +1939,23 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             p = ldimn2 / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final int firstRow = l * p;
                 final int lastRow = (l == (nthreads - 1)) ? ldimn2 : firstRow + p;
 
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         float[] temp = new float[2 * slices];
 
                         for (int r = firstRow; r < lastRow; r++) {
@@ -1789,14 +1977,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
             p = slices / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
 
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
 
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx2 = (slices - s) % slices;
@@ -1813,7 +2009,13 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
 
             for (int s = 0; s < slices; s++) {
@@ -1874,7 +2076,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void mixedRadixRealInverseFull(final float[][][] a, final boolean scale) {
+    private void mixedRadixRealInverseFull(final float[][][] a, final boolean scale)
+    {
         float[] temp = new float[2 * rows];
         int ldimn2 = rows / 2 + 1;
         final int newn3 = 2 * columns;
@@ -1893,8 +2096,10 @@ public class FloatFFT_3D {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
 
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int s = firstSlice; s < lastSlice; s++) {
                             for (int r = 0; r < rows; r++) {
                                 fftColumns.realInverseFull(a[s][r], scale);
@@ -1903,14 +2108,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
 
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         float[] temp = new float[2 * rows];
 
                         for (int s = firstSlice; s < lastSlice; s++) {
@@ -1932,14 +2145,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             p = ldimn2 / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final int firstRow = l * p;
                 final int lastRow = (l == (nthreads - 1)) ? ldimn2 : firstRow + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         float[] temp = new float[2 * slices];
 
                         for (int r = firstRow; r < lastRow; r++) {
@@ -1961,14 +2182,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
             p = slices / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
 
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
 
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx2 = (slices - s) % slices;
@@ -1985,7 +2214,13 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
 
             for (int s = 0; s < slices; s++) {
@@ -2046,7 +2281,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void mixedRadixRealForwardFull(final float[] a) {
+    private void mixedRadixRealForwardFull(final float[] a)
+    {
         final int twon3 = 2 * columns;
         float[] temp = new float[twon3];
         int ldimn2 = rows / 2 + 1;
@@ -2067,8 +2303,10 @@ public class FloatFFT_3D {
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = slices - 1 - l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? n1d2 + 1 : firstSlice - p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         float[] temp = new float[twon3];
                         for (int s = firstSlice; s >= lastSlice; s--) {
                             int idx1 = s * sliceStride;
@@ -2082,15 +2320,23 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             final float[][][] temp2 = new float[n1d2 + 1][rows][twon3];
 
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? n1d2 + 1 : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx1 = s * sliceStride;
                             for (int r = 0; r < rows; r++) {
@@ -2101,13 +2347,21 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? n1d2 + 1 : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx1 = s * twoSliceStride;
                             for (int r = 0; r < rows; r++) {
@@ -2117,14 +2371,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             p = slices / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         float[] temp = new float[2 * rows];
 
                         for (int s = firstSlice; s < lastSlice; s++) {
@@ -2149,14 +2411,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             p = ldimn2 / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final int firstRow = l * p;
                 final int lastRow = (l == (nthreads - 1)) ? ldimn2 : firstRow + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         float[] temp = new float[2 * slices];
 
                         for (int r = firstRow; r < lastRow; r++) {
@@ -2181,13 +2451,21 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
             p = slices / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
 
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx2 = (slices - s) % slices;
@@ -2210,7 +2488,13 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
 
             for (int s = slices - 1; s >= 0; s--) {
@@ -2289,9 +2573,10 @@ public class FloatFFT_3D {
         }
     }
 
-    private void mixedRadixRealForwardFull(final FloatLargeArray a) {
+    private void mixedRadixRealForwardFull(final FloatLargeArray a)
+    {
         final long twon3 = 2 * columnsl;
-        FloatLargeArray temp = new FloatLargeArray(twon3, false);
+        FloatLargeArray temp = new FloatLargeArray(twon3);
         long ldimn2 = rowsl / 2 + 1;
         final long n2d2;
         if (rowsl % 2 == 0) {
@@ -2310,64 +2595,90 @@ public class FloatFFT_3D {
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = slicesl - 1 - l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? n1d2 + 1 : firstSlice - p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
-                        FloatLargeArray temp = new FloatLargeArray(twon3, false);
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        FloatLargeArray temp = new FloatLargeArray(twon3);
                         for (long s = firstSlice; s >= lastSlice; s--) {
                             long idx1 = s * sliceStridel;
                             long idx2 = s * twoSliceStride;
                             for (long r = rowsl - 1; r >= 0; r--) {
-                                Utilities.arraycopy(a, idx1 + r * rowStridel, temp, 0, columnsl);
+                                LargeArrayUtils.arraycopy(a, idx1 + r * rowStridel, temp, 0, columnsl);
                                 fftColumns.realForwardFull(temp);
-                                Utilities.arraycopy(temp, 0, a, idx2 + r * twoRowStride, twon3);
+                                LargeArrayUtils.arraycopy(temp, 0, a, idx2 + r * twoRowStride, twon3);
                             }
                         }
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
-            final FloatLargeArray temp2 = new FloatLargeArray((n1d2 + 1) * rowsl * twon3, false);
+            final FloatLargeArray temp2 = new FloatLargeArray((n1d2 + 1) * rowsl * twon3);
 
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? n1d2 + 1 : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long s = firstSlice; s < lastSlice; s++) {
                             long idx1 = s * sliceStridel;
                             for (long r = 0; r < rowsl; r++) {
-                                Utilities.arraycopy(a, idx1 + r * rowStridel, temp2, s * rowsl * twon3 + r * twon3, columnsl);
+                                LargeArrayUtils.arraycopy(a, idx1 + r * rowStridel, temp2, s * rowsl * twon3 + r * twon3, columnsl);
                                 fftColumns.realForwardFull(temp2, s * rowsl * twon3 + r * twon3);
                             }
                         }
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? n1d2 + 1 : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long s = firstSlice; s < lastSlice; s++) {
                             long idx1 = s * twoSliceStride;
                             for (long r = 0; r < rowsl; r++) {
-                                Utilities.arraycopy(temp2, s * rowsl * twon3 + r * twon3, a, idx1 + r * twoRowStride, twon3);
+                                LargeArrayUtils.arraycopy(temp2, s * rowsl * twon3 + r * twon3, a, idx1 + r * twoRowStride, twon3);
                             }
                         }
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             p = slicesl / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         FloatLargeArray temp = new FloatLargeArray(2 * rowsl, false);
 
                         for (long s = firstSlice; s < lastSlice; s++) {
@@ -2392,14 +2703,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             p = ldimn2 / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final long firstRow = l * p;
                 final long lastRow = (l == (nthreads - 1)) ? ldimn2 : firstRow + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         FloatLargeArray temp = new FloatLargeArray(2 * slicesl, false);
 
                         for (long r = firstRow; r < lastRow; r++) {
@@ -2424,13 +2743,21 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
             p = slicesl / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
 
                         for (long s = firstSlice; s < lastSlice; s++) {
                             long idx2 = (slicesl - s) % slicesl;
@@ -2453,16 +2780,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
 
             for (long s = slicesl - 1; s >= 0; s--) {
                 long idx1 = s * sliceStridel;
                 long idx2 = s * twoSliceStride;
                 for (long r = rowsl - 1; r >= 0; r--) {
-                    Utilities.arraycopy(a, idx1 + r * rowStridel, temp, 0, columnsl);
+                    LargeArrayUtils.arraycopy(a, idx1 + r * rowStridel, temp, 0, columnsl);
                     fftColumns.realForwardFull(temp);
-                    Utilities.arraycopy(temp, 0, a, idx2 + r * twoRowStride, twon3);
+                    LargeArrayUtils.arraycopy(temp, 0, a, idx2 + r * twoRowStride, twon3);
                 }
             }
 
@@ -2532,7 +2865,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void mixedRadixRealInverseFull(final float[] a, final boolean scale) {
+    private void mixedRadixRealInverseFull(final float[] a, final boolean scale)
+    {
         final int twon3 = 2 * columns;
         float[] temp = new float[twon3];
         int ldimn2 = rows / 2 + 1;
@@ -2554,8 +2888,10 @@ public class FloatFFT_3D {
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = slices - 1 - l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? n1d2 + 1 : firstSlice - p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         float[] temp = new float[twon3];
                         for (int s = firstSlice; s >= lastSlice; s--) {
                             int idx1 = s * sliceStride;
@@ -2569,15 +2905,23 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             final float[][][] temp2 = new float[n1d2 + 1][rows][twon3];
 
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? n1d2 + 1 : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx1 = s * sliceStride;
                             for (int r = 0; r < rows; r++) {
@@ -2588,13 +2932,21 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? n1d2 + 1 : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx1 = s * twoSliceStride;
                             for (int r = 0; r < rows; r++) {
@@ -2604,14 +2956,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             p = slices / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         float[] temp = new float[2 * rows];
 
                         for (int s = firstSlice; s < lastSlice; s++) {
@@ -2636,14 +2996,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             p = ldimn2 / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final int firstRow = l * p;
                 final int lastRow = (l == (nthreads - 1)) ? ldimn2 : firstRow + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         float[] temp = new float[2 * slices];
 
                         for (int r = firstRow; r < lastRow; r++) {
@@ -2668,14 +3036,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             p = slices / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
 
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx2 = (slices - s) % slices;
@@ -2698,7 +3074,13 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
 
             for (int s = slices - 1; s >= 0; s--) {
@@ -2777,9 +3159,10 @@ public class FloatFFT_3D {
         }
     }
 
-    private void mixedRadixRealInverseFull(final FloatLargeArray a, final boolean scale) {
+    private void mixedRadixRealInverseFull(final FloatLargeArray a, final boolean scale)
+    {
         final long twon3 = 2 * columnsl;
-        FloatLargeArray temp = new FloatLargeArray(twon3, false);
+        FloatLargeArray temp = new FloatLargeArray(twon3);
         long ldimn2 = rowsl / 2 + 1;
         final long n2d2;
         if (rowsl % 2 == 0) {
@@ -2799,64 +3182,90 @@ public class FloatFFT_3D {
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = slicesl - 1 - l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? n1d2 + 1 : firstSlice - p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
-                        FloatLargeArray temp = new FloatLargeArray(twon3, false);
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
+                        FloatLargeArray temp = new FloatLargeArray(twon3);
                         for (long s = firstSlice; s >= lastSlice; s--) {
                             long idx1 = s * sliceStridel;
                             long idx2 = s * twoSliceStride;
                             for (long r = rowsl - 1; r >= 0; r--) {
-                                Utilities.arraycopy(a, idx1 + r * rowStridel, temp, 0, columnsl);
+                                LargeArrayUtils.arraycopy(a, idx1 + r * rowStridel, temp, 0, columnsl);
                                 fftColumns.realInverseFull(temp, scale);
-                                Utilities.arraycopy(temp, 0, a, idx2 + r * twoRowStride, twon3);
+                                LargeArrayUtils.arraycopy(temp, 0, a, idx2 + r * twoRowStride, twon3);
                             }
                         }
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
-            final FloatLargeArray temp2 = new FloatLargeArray((n1d2 + 1) * rowsl * twon3, false);
+            final FloatLargeArray temp2 = new FloatLargeArray((n1d2 + 1) * rowsl * twon3);
 
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? n1d2 + 1 : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long s = firstSlice; s < lastSlice; s++) {
                             long idx1 = s * sliceStridel;
                             for (long r = 0; r < rowsl; r++) {
-                                Utilities.arraycopy(a, idx1 + r * rowStridel, temp2, s * rowsl * twon3 + r * twon3, columnsl);
+                                LargeArrayUtils.arraycopy(a, idx1 + r * rowStridel, temp2, s * rowsl * twon3 + r * twon3, columnsl);
                                 fftColumns.realInverseFull(temp2, s * rowsl * twon3 + r * twon3, scale);
                             }
                         }
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? n1d2 + 1 : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long s = firstSlice; s < lastSlice; s++) {
                             long idx1 = s * twoSliceStride;
                             for (long r = 0; r < rowsl; r++) {
-                                Utilities.arraycopy(temp2, s * rowsl * twon3 + r * twon3, a, idx1 + r * twoRowStride, twon3);
+                                LargeArrayUtils.arraycopy(temp2, s * rowsl * twon3 + r * twon3, a, idx1 + r * twoRowStride, twon3);
                             }
                         }
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             p = slicesl / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         FloatLargeArray temp = new FloatLargeArray(2 * rowsl, false);
 
                         for (long s = firstSlice; s < lastSlice; s++) {
@@ -2881,14 +3290,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             p = ldimn2 / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final long firstRow = l * p;
                 final long lastRow = (l == (nthreads - 1)) ? ldimn2 : firstRow + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         FloatLargeArray temp = new FloatLargeArray(2 * slicesl, false);
 
                         for (long r = firstRow; r < lastRow; r++) {
@@ -2913,14 +3330,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             p = slicesl / nthreads;
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
 
                         for (long s = firstSlice; s < lastSlice; s++) {
                             long idx2 = (slicesl - s) % slicesl;
@@ -2943,16 +3368,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
 
             for (long s = slicesl - 1; s >= 0; s--) {
                 long idx1 = s * sliceStridel;
                 long idx2 = s * twoSliceStride;
                 for (long r = rowsl - 1; r >= 0; r--) {
-                    Utilities.arraycopy(a, idx1 + r * rowStridel, temp, 0, columnsl);
+                    LargeArrayUtils.arraycopy(a, idx1 + r * rowStridel, temp, 0, columnsl);
                     fftColumns.realInverseFull(temp, scale);
-                    Utilities.arraycopy(temp, 0, a, idx2 + r * twoRowStride, twon3);
+                    LargeArrayUtils.arraycopy(temp, 0, a, idx2 + r * twoRowStride, twon3);
                 }
             }
 
@@ -3022,7 +3453,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void xdft3da_sub1(int icr, int isgn, float[] a, boolean scale) {
+    private void xdft3da_sub1(int icr, int isgn, float[] a, boolean scale)
+    {
         int idx0, idx1, idx2, idx3, idx4, idx5;
         int nt = slices;
         if (nt < rows) {
@@ -3211,7 +3643,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void xdft3da_sub1(long icr, int isgn, FloatLargeArray a, boolean scale) {
+    private void xdft3da_sub1(long icr, int isgn, FloatLargeArray a, boolean scale)
+    {
         long idx0, idx1, idx2, idx3, idx4, idx5;
         long nt = slicesl;
         if (nt < rowsl) {
@@ -3223,7 +3656,7 @@ public class FloatFFT_3D {
         } else if (columnsl < 4) {
             nt >>= 2l;
         }
-        FloatLargeArray t = new FloatLargeArray(nt, false);
+        FloatLargeArray t = new FloatLargeArray(nt);
         if (isgn == -1) {
             for (long s = 0; s < slicesl; s++) {
                 idx0 = s * sliceStridel;
@@ -3400,7 +3833,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void xdft3da_sub2(int icr, int isgn, float[] a, boolean scale) {
+    private void xdft3da_sub2(int icr, int isgn, float[] a, boolean scale)
+    {
         int idx0, idx1, idx2, idx3, idx4, idx5;
         int nt = slices;
         if (nt < rows) {
@@ -3588,7 +4022,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void xdft3da_sub2(long icr, int isgn, FloatLargeArray a, boolean scale) {
+    private void xdft3da_sub2(long icr, int isgn, FloatLargeArray a, boolean scale)
+    {
         long idx0, idx1, idx2, idx3, idx4, idx5;
         long nt = slicesl;
         if (nt < rowsl) {
@@ -3600,7 +4035,7 @@ public class FloatFFT_3D {
         } else if (columnsl < 4) {
             nt >>= 2;
         }
-        FloatLargeArray t = new FloatLargeArray(nt, false);
+        FloatLargeArray t = new FloatLargeArray(nt);
         if (isgn == -1) {
             for (long s = 0; s < slicesl; s++) {
                 idx0 = s * sliceStridel;
@@ -3776,7 +4211,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void xdft3da_sub1(int icr, int isgn, float[][][] a, boolean scale) {
+    private void xdft3da_sub1(int icr, int isgn, float[][][] a, boolean scale)
+    {
         int idx2, idx3, idx4, idx5;
         int nt = slices;
         if (nt < rows) {
@@ -3951,7 +4387,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void xdft3da_sub2(int icr, int isgn, float[][][] a, boolean scale) {
+    private void xdft3da_sub2(int icr, int isgn, float[][][] a, boolean scale)
+    {
         int idx2, idx3, idx4, idx5;
         int nt = slices;
         if (nt < rows) {
@@ -4125,7 +4562,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void cdft3db_sub(int isgn, float[] a, boolean scale) {
+    private void cdft3db_sub(int isgn, float[] a, boolean scale)
+    {
         int idx0, idx1, idx2, idx3, idx4, idx5;
         int nt = slices;
         if (nt < rows) {
@@ -4221,93 +4659,92 @@ public class FloatFFT_3D {
                     }
                 }
             }
-        } else {
-            if (columns > 4) {
-                for (int r = 0; r < rows; r++) {
-                    idx0 = r * rowStride;
-                    for (int c = 0; c < columns; c += 8) {
-                        for (int s = 0; s < slices; s++) {
-                            idx1 = s * sliceStride + idx0 + c;
-                            idx2 = 2 * s;
-                            idx3 = 2 * slices + 2 * s;
-                            idx4 = idx3 + 2 * slices;
-                            idx5 = idx4 + 2 * slices;
-                            t[idx2] = a[idx1];
-                            t[idx2 + 1] = a[idx1 + 1];
-                            t[idx3] = a[idx1 + 2];
-                            t[idx3 + 1] = a[idx1 + 3];
-                            t[idx4] = a[idx1 + 4];
-                            t[idx4 + 1] = a[idx1 + 5];
-                            t[idx5] = a[idx1 + 6];
-                            t[idx5 + 1] = a[idx1 + 7];
-                        }
-                        fftSlices.complexInverse(t, 0, scale);
-                        fftSlices.complexInverse(t, 2 * slices, scale);
-                        fftSlices.complexInverse(t, 4 * slices, scale);
-                        fftSlices.complexInverse(t, 6 * slices, scale);
-                        for (int s = 0; s < slices; s++) {
-                            idx1 = s * sliceStride + idx0 + c;
-                            idx2 = 2 * s;
-                            idx3 = 2 * slices + 2 * s;
-                            idx4 = idx3 + 2 * slices;
-                            idx5 = idx4 + 2 * slices;
-                            a[idx1] = t[idx2];
-                            a[idx1 + 1] = t[idx2 + 1];
-                            a[idx1 + 2] = t[idx3];
-                            a[idx1 + 3] = t[idx3 + 1];
-                            a[idx1 + 4] = t[idx4];
-                            a[idx1 + 5] = t[idx4 + 1];
-                            a[idx1 + 6] = t[idx5];
-                            a[idx1 + 7] = t[idx5 + 1];
-                        }
-                    }
-                }
-            } else if (columns == 4) {
-                for (int r = 0; r < rows; r++) {
-                    idx0 = r * rowStride;
+        } else if (columns > 4) {
+            for (int r = 0; r < rows; r++) {
+                idx0 = r * rowStride;
+                for (int c = 0; c < columns; c += 8) {
                     for (int s = 0; s < slices; s++) {
-                        idx1 = s * sliceStride + idx0;
+                        idx1 = s * sliceStride + idx0 + c;
                         idx2 = 2 * s;
                         idx3 = 2 * slices + 2 * s;
+                        idx4 = idx3 + 2 * slices;
+                        idx5 = idx4 + 2 * slices;
                         t[idx2] = a[idx1];
                         t[idx2 + 1] = a[idx1 + 1];
                         t[idx3] = a[idx1 + 2];
                         t[idx3 + 1] = a[idx1 + 3];
+                        t[idx4] = a[idx1 + 4];
+                        t[idx4 + 1] = a[idx1 + 5];
+                        t[idx5] = a[idx1 + 6];
+                        t[idx5 + 1] = a[idx1 + 7];
                     }
                     fftSlices.complexInverse(t, 0, scale);
                     fftSlices.complexInverse(t, 2 * slices, scale);
+                    fftSlices.complexInverse(t, 4 * slices, scale);
+                    fftSlices.complexInverse(t, 6 * slices, scale);
                     for (int s = 0; s < slices; s++) {
-                        idx1 = s * sliceStride + idx0;
+                        idx1 = s * sliceStride + idx0 + c;
                         idx2 = 2 * s;
                         idx3 = 2 * slices + 2 * s;
+                        idx4 = idx3 + 2 * slices;
+                        idx5 = idx4 + 2 * slices;
                         a[idx1] = t[idx2];
                         a[idx1 + 1] = t[idx2 + 1];
                         a[idx1 + 2] = t[idx3];
                         a[idx1 + 3] = t[idx3 + 1];
+                        a[idx1 + 4] = t[idx4];
+                        a[idx1 + 5] = t[idx4 + 1];
+                        a[idx1 + 6] = t[idx5];
+                        a[idx1 + 7] = t[idx5 + 1];
                     }
                 }
-            } else if (columns == 2) {
-                for (int r = 0; r < rows; r++) {
-                    idx0 = r * rowStride;
-                    for (int s = 0; s < slices; s++) {
-                        idx1 = s * sliceStride + idx0;
-                        idx2 = 2 * s;
-                        t[idx2] = a[idx1];
-                        t[idx2 + 1] = a[idx1 + 1];
-                    }
-                    fftSlices.complexInverse(t, 0, scale);
-                    for (int s = 0; s < slices; s++) {
-                        idx1 = s * sliceStride + idx0;
-                        idx2 = 2 * s;
-                        a[idx1] = t[idx2];
-                        a[idx1 + 1] = t[idx2 + 1];
-                    }
+            }
+        } else if (columns == 4) {
+            for (int r = 0; r < rows; r++) {
+                idx0 = r * rowStride;
+                for (int s = 0; s < slices; s++) {
+                    idx1 = s * sliceStride + idx0;
+                    idx2 = 2 * s;
+                    idx3 = 2 * slices + 2 * s;
+                    t[idx2] = a[idx1];
+                    t[idx2 + 1] = a[idx1 + 1];
+                    t[idx3] = a[idx1 + 2];
+                    t[idx3 + 1] = a[idx1 + 3];
+                }
+                fftSlices.complexInverse(t, 0, scale);
+                fftSlices.complexInverse(t, 2 * slices, scale);
+                for (int s = 0; s < slices; s++) {
+                    idx1 = s * sliceStride + idx0;
+                    idx2 = 2 * s;
+                    idx3 = 2 * slices + 2 * s;
+                    a[idx1] = t[idx2];
+                    a[idx1 + 1] = t[idx2 + 1];
+                    a[idx1 + 2] = t[idx3];
+                    a[idx1 + 3] = t[idx3 + 1];
+                }
+            }
+        } else if (columns == 2) {
+            for (int r = 0; r < rows; r++) {
+                idx0 = r * rowStride;
+                for (int s = 0; s < slices; s++) {
+                    idx1 = s * sliceStride + idx0;
+                    idx2 = 2 * s;
+                    t[idx2] = a[idx1];
+                    t[idx2 + 1] = a[idx1 + 1];
+                }
+                fftSlices.complexInverse(t, 0, scale);
+                for (int s = 0; s < slices; s++) {
+                    idx1 = s * sliceStride + idx0;
+                    idx2 = 2 * s;
+                    a[idx1] = t[idx2];
+                    a[idx1 + 1] = t[idx2 + 1];
                 }
             }
         }
     }
 
-    private void cdft3db_sub(int isgn, FloatLargeArray a, boolean scale) {
+    private void cdft3db_sub(int isgn, FloatLargeArray a, boolean scale)
+    {
         long idx0, idx1, idx2, idx3, idx4, idx5;
         long nt = slicesl;
         if (nt < rowsl) {
@@ -4319,7 +4756,7 @@ public class FloatFFT_3D {
         } else if (columnsl < 4) {
             nt >>= 2;
         }
-        FloatLargeArray t = new FloatLargeArray(nt, false);
+        FloatLargeArray t = new FloatLargeArray(nt);
         if (isgn == -1) {
             if (columnsl > 4) {
                 for (long r = 0; r < rowsl; r++) {
@@ -4403,93 +4840,92 @@ public class FloatFFT_3D {
                     }
                 }
             }
-        } else {
-            if (columnsl > 4) {
-                for (long r = 0; r < rowsl; r++) {
-                    idx0 = r * rowStridel;
-                    for (long c = 0; c < columnsl; c += 8) {
-                        for (long s = 0; s < slicesl; s++) {
-                            idx1 = s * sliceStridel + idx0 + c;
-                            idx2 = 2 * s;
-                            idx3 = 2 * slicesl + 2 * s;
-                            idx4 = idx3 + 2 * slicesl;
-                            idx5 = idx4 + 2 * slicesl;
-                            t.setFloat(idx2, a.getFloat(idx1));
-                            t.setFloat(idx2 + 1, a.getFloat(idx1 + 1));
-                            t.setFloat(idx3, a.getFloat(idx1 + 2));
-                            t.setFloat(idx3 + 1, a.getFloat(idx1 + 3));
-                            t.setFloat(idx4, a.getFloat(idx1 + 4));
-                            t.setFloat(idx4 + 1, a.getFloat(idx1 + 5));
-                            t.setFloat(idx5, a.getFloat(idx1 + 6));
-                            t.setFloat(idx5 + 1, a.getFloat(idx1 + 7));
-                        }
-                        fftSlices.complexInverse(t, 0, scale);
-                        fftSlices.complexInverse(t, 2 * slicesl, scale);
-                        fftSlices.complexInverse(t, 4 * slicesl, scale);
-                        fftSlices.complexInverse(t, 6 * slicesl, scale);
-                        for (long s = 0; s < slicesl; s++) {
-                            idx1 = s * sliceStridel + idx0 + c;
-                            idx2 = 2 * s;
-                            idx3 = 2 * slicesl + 2 * s;
-                            idx4 = idx3 + 2 * slicesl;
-                            idx5 = idx4 + 2 * slicesl;
-                            a.setFloat(idx1, t.getFloat(idx2));
-                            a.setFloat(idx1 + 1, t.getFloat(idx2 + 1));
-                            a.setFloat(idx1 + 2, t.getFloat(idx3));
-                            a.setFloat(idx1 + 3, t.getFloat(idx3 + 1));
-                            a.setFloat(idx1 + 4, t.getFloat(idx4));
-                            a.setFloat(idx1 + 5, t.getFloat(idx4 + 1));
-                            a.setFloat(idx1 + 6, t.getFloat(idx5));
-                            a.setFloat(idx1 + 7, t.getFloat(idx5 + 1));
-                        }
-                    }
-                }
-            } else if (columnsl == 4) {
-                for (long r = 0; r < rowsl; r++) {
-                    idx0 = r * rowStridel;
+        } else if (columnsl > 4) {
+            for (long r = 0; r < rowsl; r++) {
+                idx0 = r * rowStridel;
+                for (long c = 0; c < columnsl; c += 8) {
                     for (long s = 0; s < slicesl; s++) {
-                        idx1 = s * sliceStridel + idx0;
+                        idx1 = s * sliceStridel + idx0 + c;
                         idx2 = 2 * s;
                         idx3 = 2 * slicesl + 2 * s;
+                        idx4 = idx3 + 2 * slicesl;
+                        idx5 = idx4 + 2 * slicesl;
                         t.setFloat(idx2, a.getFloat(idx1));
                         t.setFloat(idx2 + 1, a.getFloat(idx1 + 1));
                         t.setFloat(idx3, a.getFloat(idx1 + 2));
                         t.setFloat(idx3 + 1, a.getFloat(idx1 + 3));
+                        t.setFloat(idx4, a.getFloat(idx1 + 4));
+                        t.setFloat(idx4 + 1, a.getFloat(idx1 + 5));
+                        t.setFloat(idx5, a.getFloat(idx1 + 6));
+                        t.setFloat(idx5 + 1, a.getFloat(idx1 + 7));
                     }
                     fftSlices.complexInverse(t, 0, scale);
                     fftSlices.complexInverse(t, 2 * slicesl, scale);
+                    fftSlices.complexInverse(t, 4 * slicesl, scale);
+                    fftSlices.complexInverse(t, 6 * slicesl, scale);
                     for (long s = 0; s < slicesl; s++) {
-                        idx1 = s * sliceStridel + idx0;
+                        idx1 = s * sliceStridel + idx0 + c;
                         idx2 = 2 * s;
                         idx3 = 2 * slicesl + 2 * s;
+                        idx4 = idx3 + 2 * slicesl;
+                        idx5 = idx4 + 2 * slicesl;
                         a.setFloat(idx1, t.getFloat(idx2));
                         a.setFloat(idx1 + 1, t.getFloat(idx2 + 1));
                         a.setFloat(idx1 + 2, t.getFloat(idx3));
                         a.setFloat(idx1 + 3, t.getFloat(idx3 + 1));
+                        a.setFloat(idx1 + 4, t.getFloat(idx4));
+                        a.setFloat(idx1 + 5, t.getFloat(idx4 + 1));
+                        a.setFloat(idx1 + 6, t.getFloat(idx5));
+                        a.setFloat(idx1 + 7, t.getFloat(idx5 + 1));
                     }
                 }
-            } else if (columnsl == 2) {
-                for (long r = 0; r < rowsl; r++) {
-                    idx0 = r * rowStridel;
-                    for (long s = 0; s < slicesl; s++) {
-                        idx1 = s * sliceStridel + idx0;
-                        idx2 = 2 * s;
-                        t.setFloat(idx2, a.getFloat(idx1));
-                        t.setFloat(idx2 + 1, a.getFloat(idx1 + 1));
-                    }
-                    fftSlices.complexInverse(t, 0, scale);
-                    for (long s = 0; s < slicesl; s++) {
-                        idx1 = s * sliceStridel + idx0;
-                        idx2 = 2 * s;
-                        a.setFloat(idx1, t.getFloat(idx2));
-                        a.setFloat(idx1 + 1, t.getFloat(idx2 + 1));
-                    }
+            }
+        } else if (columnsl == 4) {
+            for (long r = 0; r < rowsl; r++) {
+                idx0 = r * rowStridel;
+                for (long s = 0; s < slicesl; s++) {
+                    idx1 = s * sliceStridel + idx0;
+                    idx2 = 2 * s;
+                    idx3 = 2 * slicesl + 2 * s;
+                    t.setFloat(idx2, a.getFloat(idx1));
+                    t.setFloat(idx2 + 1, a.getFloat(idx1 + 1));
+                    t.setFloat(idx3, a.getFloat(idx1 + 2));
+                    t.setFloat(idx3 + 1, a.getFloat(idx1 + 3));
+                }
+                fftSlices.complexInverse(t, 0, scale);
+                fftSlices.complexInverse(t, 2 * slicesl, scale);
+                for (long s = 0; s < slicesl; s++) {
+                    idx1 = s * sliceStridel + idx0;
+                    idx2 = 2 * s;
+                    idx3 = 2 * slicesl + 2 * s;
+                    a.setFloat(idx1, t.getFloat(idx2));
+                    a.setFloat(idx1 + 1, t.getFloat(idx2 + 1));
+                    a.setFloat(idx1 + 2, t.getFloat(idx3));
+                    a.setFloat(idx1 + 3, t.getFloat(idx3 + 1));
+                }
+            }
+        } else if (columnsl == 2) {
+            for (long r = 0; r < rowsl; r++) {
+                idx0 = r * rowStridel;
+                for (long s = 0; s < slicesl; s++) {
+                    idx1 = s * sliceStridel + idx0;
+                    idx2 = 2 * s;
+                    t.setFloat(idx2, a.getFloat(idx1));
+                    t.setFloat(idx2 + 1, a.getFloat(idx1 + 1));
+                }
+                fftSlices.complexInverse(t, 0, scale);
+                for (long s = 0; s < slicesl; s++) {
+                    idx1 = s * sliceStridel + idx0;
+                    idx2 = 2 * s;
+                    a.setFloat(idx1, t.getFloat(idx2));
+                    a.setFloat(idx1 + 1, t.getFloat(idx2 + 1));
                 }
             }
         }
     }
 
-    private void cdft3db_sub(int isgn, float[][][] a, boolean scale) {
+    private void cdft3db_sub(int isgn, float[][][] a, boolean scale)
+    {
         int idx2, idx3, idx4, idx5;
         int nt = slices;
         if (nt < rows) {
@@ -4576,86 +5012,85 @@ public class FloatFFT_3D {
                     }
                 }
             }
-        } else {
-            if (columns > 4) {
-                for (int r = 0; r < rows; r++) {
-                    for (int c = 0; c < columns; c += 8) {
-                        for (int s = 0; s < slices; s++) {
-                            idx2 = 2 * s;
-                            idx3 = 2 * slices + 2 * s;
-                            idx4 = idx3 + 2 * slices;
-                            idx5 = idx4 + 2 * slices;
-                            t[idx2] = a[s][r][c];
-                            t[idx2 + 1] = a[s][r][c + 1];
-                            t[idx3] = a[s][r][c + 2];
-                            t[idx3 + 1] = a[s][r][c + 3];
-                            t[idx4] = a[s][r][c + 4];
-                            t[idx4 + 1] = a[s][r][c + 5];
-                            t[idx5] = a[s][r][c + 6];
-                            t[idx5 + 1] = a[s][r][c + 7];
-                        }
-                        fftSlices.complexInverse(t, 0, scale);
-                        fftSlices.complexInverse(t, 2 * slices, scale);
-                        fftSlices.complexInverse(t, 4 * slices, scale);
-                        fftSlices.complexInverse(t, 6 * slices, scale);
-                        for (int s = 0; s < slices; s++) {
-                            idx2 = 2 * s;
-                            idx3 = 2 * slices + 2 * s;
-                            idx4 = idx3 + 2 * slices;
-                            idx5 = idx4 + 2 * slices;
-                            a[s][r][c] = t[idx2];
-                            a[s][r][c + 1] = t[idx2 + 1];
-                            a[s][r][c + 2] = t[idx3];
-                            a[s][r][c + 3] = t[idx3 + 1];
-                            a[s][r][c + 4] = t[idx4];
-                            a[s][r][c + 5] = t[idx4 + 1];
-                            a[s][r][c + 6] = t[idx5];
-                            a[s][r][c + 7] = t[idx5 + 1];
-                        }
-                    }
-                }
-            } else if (columns == 4) {
-                for (int r = 0; r < rows; r++) {
+        } else if (columns > 4) {
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < columns; c += 8) {
                     for (int s = 0; s < slices; s++) {
                         idx2 = 2 * s;
                         idx3 = 2 * slices + 2 * s;
-                        t[idx2] = a[s][r][0];
-                        t[idx2 + 1] = a[s][r][1];
-                        t[idx3] = a[s][r][2];
-                        t[idx3 + 1] = a[s][r][3];
+                        idx4 = idx3 + 2 * slices;
+                        idx5 = idx4 + 2 * slices;
+                        t[idx2] = a[s][r][c];
+                        t[idx2 + 1] = a[s][r][c + 1];
+                        t[idx3] = a[s][r][c + 2];
+                        t[idx3 + 1] = a[s][r][c + 3];
+                        t[idx4] = a[s][r][c + 4];
+                        t[idx4 + 1] = a[s][r][c + 5];
+                        t[idx5] = a[s][r][c + 6];
+                        t[idx5 + 1] = a[s][r][c + 7];
                     }
                     fftSlices.complexInverse(t, 0, scale);
                     fftSlices.complexInverse(t, 2 * slices, scale);
+                    fftSlices.complexInverse(t, 4 * slices, scale);
+                    fftSlices.complexInverse(t, 6 * slices, scale);
                     for (int s = 0; s < slices; s++) {
                         idx2 = 2 * s;
                         idx3 = 2 * slices + 2 * s;
-                        a[s][r][0] = t[idx2];
-                        a[s][r][1] = t[idx2 + 1];
-                        a[s][r][2] = t[idx3];
-                        a[s][r][3] = t[idx3 + 1];
+                        idx4 = idx3 + 2 * slices;
+                        idx5 = idx4 + 2 * slices;
+                        a[s][r][c] = t[idx2];
+                        a[s][r][c + 1] = t[idx2 + 1];
+                        a[s][r][c + 2] = t[idx3];
+                        a[s][r][c + 3] = t[idx3 + 1];
+                        a[s][r][c + 4] = t[idx4];
+                        a[s][r][c + 5] = t[idx4 + 1];
+                        a[s][r][c + 6] = t[idx5];
+                        a[s][r][c + 7] = t[idx5 + 1];
                     }
                 }
-            } else if (columns == 2) {
-                for (int r = 0; r < rows; r++) {
-                    for (int s = 0; s < slices; s++) {
-                        idx2 = 2 * s;
-                        t[idx2] = a[s][r][0];
-                        t[idx2 + 1] = a[s][r][1];
-                    }
-                    fftSlices.complexInverse(t, 0, scale);
-                    for (int s = 0; s < slices; s++) {
-                        idx2 = 2 * s;
-                        a[s][r][0] = t[idx2];
-                        a[s][r][1] = t[idx2 + 1];
-                    }
+            }
+        } else if (columns == 4) {
+            for (int r = 0; r < rows; r++) {
+                for (int s = 0; s < slices; s++) {
+                    idx2 = 2 * s;
+                    idx3 = 2 * slices + 2 * s;
+                    t[idx2] = a[s][r][0];
+                    t[idx2 + 1] = a[s][r][1];
+                    t[idx3] = a[s][r][2];
+                    t[idx3 + 1] = a[s][r][3];
+                }
+                fftSlices.complexInverse(t, 0, scale);
+                fftSlices.complexInverse(t, 2 * slices, scale);
+                for (int s = 0; s < slices; s++) {
+                    idx2 = 2 * s;
+                    idx3 = 2 * slices + 2 * s;
+                    a[s][r][0] = t[idx2];
+                    a[s][r][1] = t[idx2 + 1];
+                    a[s][r][2] = t[idx3];
+                    a[s][r][3] = t[idx3 + 1];
+                }
+            }
+        } else if (columns == 2) {
+            for (int r = 0; r < rows; r++) {
+                for (int s = 0; s < slices; s++) {
+                    idx2 = 2 * s;
+                    t[idx2] = a[s][r][0];
+                    t[idx2 + 1] = a[s][r][1];
+                }
+                fftSlices.complexInverse(t, 0, scale);
+                for (int s = 0; s < slices; s++) {
+                    idx2 = 2 * s;
+                    a[s][r][0] = t[idx2];
+                    a[s][r][1] = t[idx2 + 1];
                 }
             }
         }
     }
 
-    private void xdft3da_subth1(final int icr, final int isgn, final float[] a, final boolean scale) {
+    private void xdft3da_subth1(final int icr, final int isgn, final float[] a, final boolean scale)
+    {
         int i;
-        final int nthreads = Math.min(ConcurrencyUtils.getNumberOfThreads(), slices);
+        final int nthreads = min(ConcurrencyUtils.getNumberOfThreads(), slices);
         int nt = slices;
         if (nt < rows) {
             nt = rows;
@@ -4670,8 +5105,10 @@ public class FloatFFT_3D {
         Future<?>[] futures = new Future[nthreads];
         for (i = 0; i < nthreads; i++) {
             final int n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                public void run() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
+                public void run()
+                {
                     int idx0, idx1, idx2, idx3, idx4, idx5;
                     float[] t = new float[ntf];
                     if (isgn == -1) {
@@ -4852,12 +5289,19 @@ public class FloatFFT_3D {
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void xdft3da_subth1(final long icr, final int isgn, final FloatLargeArray a, final boolean scale) {
+    private void xdft3da_subth1(final long icr, final int isgn, final FloatLargeArray a, final boolean scale)
+    {
         int i;
-        final int nthreads = (int) Math.min(ConcurrencyUtils.getNumberOfThreads(), slicesl);
+        final int nthreads = (int) min(ConcurrencyUtils.getNumberOfThreads(), slicesl);
         long nt = slicesl;
         if (nt < rowsl) {
             nt = rowsl;
@@ -4872,10 +5316,12 @@ public class FloatFFT_3D {
         Future<?>[] futures = new Future[nthreads];
         for (i = 0; i < nthreads; i++) {
             final long n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                public void run() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
+                public void run()
+                {
                     long idx0, idx1, idx2, idx3, idx4, idx5;
-                    FloatLargeArray t = new FloatLargeArray(ntf, false);
+                    FloatLargeArray t = new FloatLargeArray(ntf);
                     if (isgn == -1) {
                         for (long s = n0; s < slicesl; s += nthreads) {
                             idx0 = s * sliceStridel;
@@ -5054,12 +5500,19 @@ public class FloatFFT_3D {
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void xdft3da_subth2(final int icr, final int isgn, final float[] a, final boolean scale) {
+    private void xdft3da_subth2(final int icr, final int isgn, final float[] a, final boolean scale)
+    {
         int i;
-        final int nthreads = Math.min(ConcurrencyUtils.getNumberOfThreads(), slices);
+        final int nthreads = min(ConcurrencyUtils.getNumberOfThreads(), slices);
         int nt = slices;
         if (nt < rows) {
             nt = rows;
@@ -5074,8 +5527,10 @@ public class FloatFFT_3D {
         Future<?>[] futures = new Future[nthreads];
         for (i = 0; i < nthreads; i++) {
             final int n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                public void run() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
+                public void run()
+                {
                     int idx0, idx1, idx2, idx3, idx4, idx5;
                     float[] t = new float[ntf];
                     if (isgn == -1) {
@@ -5255,12 +5710,19 @@ public class FloatFFT_3D {
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void xdft3da_subth2(final long icr, final int isgn, final FloatLargeArray a, final boolean scale) {
+    private void xdft3da_subth2(final long icr, final int isgn, final FloatLargeArray a, final boolean scale)
+    {
         int i;
-        final int nthreads = (int) Math.min(ConcurrencyUtils.getNumberOfThreads(), slicesl);
+        final int nthreads = (int) min(ConcurrencyUtils.getNumberOfThreads(), slicesl);
         long nt = slicesl;
         if (nt < rowsl) {
             nt = rowsl;
@@ -5275,10 +5737,12 @@ public class FloatFFT_3D {
         Future<?>[] futures = new Future[nthreads];
         for (i = 0; i < nthreads; i++) {
             final long n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                public void run() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
+                public void run()
+                {
                     long idx0, idx1, idx2, idx3, idx4, idx5;
-                    FloatLargeArray t = new FloatLargeArray(ntf, false);
+                    FloatLargeArray t = new FloatLargeArray(ntf);
                     if (isgn == -1) {
                         for (long s = n0; s < slicesl; s += nthreads) {
                             idx0 = s * sliceStridel;
@@ -5456,12 +5920,19 @@ public class FloatFFT_3D {
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void xdft3da_subth1(final int icr, final int isgn, final float[][][] a, final boolean scale) {
+    private void xdft3da_subth1(final int icr, final int isgn, final float[][][] a, final boolean scale)
+    {
         int i;
-        final int nthreads = Math.min(ConcurrencyUtils.getNumberOfThreads(), slices);
+        final int nthreads = min(ConcurrencyUtils.getNumberOfThreads(), slices);
         int nt = slices;
         if (nt < rows) {
             nt = rows;
@@ -5476,8 +5947,10 @@ public class FloatFFT_3D {
         Future<?>[] futures = new Future[nthreads];
         for (i = 0; i < nthreads; i++) {
             final int n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                public void run() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
+                public void run()
+                {
                     int idx2, idx3, idx4, idx5;
                     float[] t = new float[ntf];
                     if (isgn == -1) {
@@ -5644,12 +6117,19 @@ public class FloatFFT_3D {
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void xdft3da_subth2(final int icr, final int isgn, final float[][][] a, final boolean scale) {
+    private void xdft3da_subth2(final int icr, final int isgn, final float[][][] a, final boolean scale)
+    {
         int i;
-        final int nthreads = Math.min(ConcurrencyUtils.getNumberOfThreads(), slices);
+        final int nthreads = min(ConcurrencyUtils.getNumberOfThreads(), slices);
         int nt = slices;
         if (nt < rows) {
             nt = rows;
@@ -5664,8 +6144,10 @@ public class FloatFFT_3D {
         Future<?>[] futures = new Future[nthreads];
         for (i = 0; i < nthreads; i++) {
             final int n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
-                public void run() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
+                public void run()
+                {
                     int idx2, idx3, idx4, idx5;
                     float[] t = new float[ntf];
                     if (isgn == -1) {
@@ -5831,12 +6313,19 @@ public class FloatFFT_3D {
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void cdft3db_subth(final int isgn, final float[] a, final boolean scale) {
+    private void cdft3db_subth(final int isgn, final float[] a, final boolean scale)
+    {
         int i;
-        final int nthreads = Math.min(ConcurrencyUtils.getNumberOfThreads(), rows);
+        final int nthreads = min(ConcurrencyUtils.getNumberOfThreads(), rows);
         int nt = slices;
         if (nt < rows) {
             nt = rows;
@@ -5851,9 +6340,11 @@ public class FloatFFT_3D {
         Future<?>[] futures = new Future[nthreads];
         for (i = 0; i < nthreads; i++) {
             final int n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
 
-                public void run() {
+                public void run()
+                {
                     int idx0, idx1, idx2, idx3, idx4, idx5;
                     float[] t = new float[ntf];
                     if (isgn == -1) {
@@ -5939,87 +6430,85 @@ public class FloatFFT_3D {
                                 }
                             }
                         }
-                    } else {
-                        if (columns > 4) {
-                            for (int r = n0; r < rows; r += nthreads) {
-                                idx0 = r * rowStride;
-                                for (int c = 0; c < columns; c += 8) {
-                                    for (int s = 0; s < slices; s++) {
-                                        idx1 = s * sliceStride + idx0 + c;
-                                        idx2 = 2 * s;
-                                        idx3 = 2 * slices + 2 * s;
-                                        idx4 = idx3 + 2 * slices;
-                                        idx5 = idx4 + 2 * slices;
-                                        t[idx2] = a[idx1];
-                                        t[idx2 + 1] = a[idx1 + 1];
-                                        t[idx3] = a[idx1 + 2];
-                                        t[idx3 + 1] = a[idx1 + 3];
-                                        t[idx4] = a[idx1 + 4];
-                                        t[idx4 + 1] = a[idx1 + 5];
-                                        t[idx5] = a[idx1 + 6];
-                                        t[idx5 + 1] = a[idx1 + 7];
-                                    }
-                                    fftSlices.complexInverse(t, 0, scale);
-                                    fftSlices.complexInverse(t, 2 * slices, scale);
-                                    fftSlices.complexInverse(t, 4 * slices, scale);
-                                    fftSlices.complexInverse(t, 6 * slices, scale);
-                                    for (int s = 0; s < slices; s++) {
-                                        idx1 = s * sliceStride + idx0 + c;
-                                        idx2 = 2 * s;
-                                        idx3 = 2 * slices + 2 * s;
-                                        idx4 = idx3 + 2 * slices;
-                                        idx5 = idx4 + 2 * slices;
-                                        a[idx1] = t[idx2];
-                                        a[idx1 + 1] = t[idx2 + 1];
-                                        a[idx1 + 2] = t[idx3];
-                                        a[idx1 + 3] = t[idx3 + 1];
-                                        a[idx1 + 4] = t[idx4];
-                                        a[idx1 + 5] = t[idx4 + 1];
-                                        a[idx1 + 6] = t[idx5];
-                                        a[idx1 + 7] = t[idx5 + 1];
-                                    }
-                                }
-                            }
-                        } else if (columns == 4) {
-                            for (int r = n0; r < rows; r += nthreads) {
-                                idx0 = r * rowStride;
+                    } else if (columns > 4) {
+                        for (int r = n0; r < rows; r += nthreads) {
+                            idx0 = r * rowStride;
+                            for (int c = 0; c < columns; c += 8) {
                                 for (int s = 0; s < slices; s++) {
-                                    idx1 = s * sliceStride + idx0;
+                                    idx1 = s * sliceStride + idx0 + c;
                                     idx2 = 2 * s;
                                     idx3 = 2 * slices + 2 * s;
+                                    idx4 = idx3 + 2 * slices;
+                                    idx5 = idx4 + 2 * slices;
                                     t[idx2] = a[idx1];
                                     t[idx2 + 1] = a[idx1 + 1];
                                     t[idx3] = a[idx1 + 2];
                                     t[idx3 + 1] = a[idx1 + 3];
+                                    t[idx4] = a[idx1 + 4];
+                                    t[idx4 + 1] = a[idx1 + 5];
+                                    t[idx5] = a[idx1 + 6];
+                                    t[idx5 + 1] = a[idx1 + 7];
                                 }
                                 fftSlices.complexInverse(t, 0, scale);
                                 fftSlices.complexInverse(t, 2 * slices, scale);
+                                fftSlices.complexInverse(t, 4 * slices, scale);
+                                fftSlices.complexInverse(t, 6 * slices, scale);
                                 for (int s = 0; s < slices; s++) {
-                                    idx1 = s * sliceStride + idx0;
+                                    idx1 = s * sliceStride + idx0 + c;
                                     idx2 = 2 * s;
                                     idx3 = 2 * slices + 2 * s;
+                                    idx4 = idx3 + 2 * slices;
+                                    idx5 = idx4 + 2 * slices;
                                     a[idx1] = t[idx2];
                                     a[idx1 + 1] = t[idx2 + 1];
                                     a[idx1 + 2] = t[idx3];
                                     a[idx1 + 3] = t[idx3 + 1];
+                                    a[idx1 + 4] = t[idx4];
+                                    a[idx1 + 5] = t[idx4 + 1];
+                                    a[idx1 + 6] = t[idx5];
+                                    a[idx1 + 7] = t[idx5 + 1];
                                 }
                             }
-                        } else if (columns == 2) {
-                            for (int r = n0; r < rows; r += nthreads) {
-                                idx0 = r * rowStride;
-                                for (int s = 0; s < slices; s++) {
-                                    idx1 = s * sliceStride + idx0;
-                                    idx2 = 2 * s;
-                                    t[idx2] = a[idx1];
-                                    t[idx2 + 1] = a[idx1 + 1];
-                                }
-                                fftSlices.complexInverse(t, 0, scale);
-                                for (int s = 0; s < slices; s++) {
-                                    idx1 = s * sliceStride + idx0;
-                                    idx2 = 2 * s;
-                                    a[idx1] = t[idx2];
-                                    a[idx1 + 1] = t[idx2 + 1];
-                                }
+                        }
+                    } else if (columns == 4) {
+                        for (int r = n0; r < rows; r += nthreads) {
+                            idx0 = r * rowStride;
+                            for (int s = 0; s < slices; s++) {
+                                idx1 = s * sliceStride + idx0;
+                                idx2 = 2 * s;
+                                idx3 = 2 * slices + 2 * s;
+                                t[idx2] = a[idx1];
+                                t[idx2 + 1] = a[idx1 + 1];
+                                t[idx3] = a[idx1 + 2];
+                                t[idx3 + 1] = a[idx1 + 3];
+                            }
+                            fftSlices.complexInverse(t, 0, scale);
+                            fftSlices.complexInverse(t, 2 * slices, scale);
+                            for (int s = 0; s < slices; s++) {
+                                idx1 = s * sliceStride + idx0;
+                                idx2 = 2 * s;
+                                idx3 = 2 * slices + 2 * s;
+                                a[idx1] = t[idx2];
+                                a[idx1 + 1] = t[idx2 + 1];
+                                a[idx1 + 2] = t[idx3];
+                                a[idx1 + 3] = t[idx3 + 1];
+                            }
+                        }
+                    } else if (columns == 2) {
+                        for (int r = n0; r < rows; r += nthreads) {
+                            idx0 = r * rowStride;
+                            for (int s = 0; s < slices; s++) {
+                                idx1 = s * sliceStride + idx0;
+                                idx2 = 2 * s;
+                                t[idx2] = a[idx1];
+                                t[idx2 + 1] = a[idx1 + 1];
+                            }
+                            fftSlices.complexInverse(t, 0, scale);
+                            for (int s = 0; s < slices; s++) {
+                                idx1 = s * sliceStride + idx0;
+                                idx2 = 2 * s;
+                                a[idx1] = t[idx2];
+                                a[idx1 + 1] = t[idx2 + 1];
                             }
                         }
                     }
@@ -6027,12 +6516,19 @@ public class FloatFFT_3D {
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void cdft3db_subth(final int isgn, final FloatLargeArray a, final boolean scale) {
+    private void cdft3db_subth(final int isgn, final FloatLargeArray a, final boolean scale)
+    {
         int i;
-        final int nthreads = (int) Math.min(ConcurrencyUtils.getNumberOfThreads(), rowsl);
+        final int nthreads = (int) min(ConcurrencyUtils.getNumberOfThreads(), rowsl);
         long nt = slicesl;
         if (nt < rowsl) {
             nt = rowsl;
@@ -6047,11 +6543,13 @@ public class FloatFFT_3D {
         Future<?>[] futures = new Future[nthreads];
         for (i = 0; i < nthreads; i++) {
             final long n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
 
-                public void run() {
+                public void run()
+                {
                     long idx0, idx1, idx2, idx3, idx4, idx5;
-                    FloatLargeArray t = new FloatLargeArray(ntf, false);
+                    FloatLargeArray t = new FloatLargeArray(ntf);
                     if (isgn == -1) {
                         if (columnsl > 4) {
                             for (long r = n0; r < rowsl; r += nthreads) {
@@ -6135,87 +6633,85 @@ public class FloatFFT_3D {
                                 }
                             }
                         }
-                    } else {
-                        if (columnsl > 4) {
-                            for (long r = n0; r < rowsl; r += nthreads) {
-                                idx0 = r * rowStridel;
-                                for (long c = 0; c < columnsl; c += 8) {
-                                    for (long s = 0; s < slicesl; s++) {
-                                        idx1 = s * sliceStridel + idx0 + c;
-                                        idx2 = 2 * s;
-                                        idx3 = 2 * slicesl + 2 * s;
-                                        idx4 = idx3 + 2 * slicesl;
-                                        idx5 = idx4 + 2 * slicesl;
-                                        t.setFloat(idx2, a.getFloat(idx1));
-                                        t.setFloat(idx2 + 1, a.getFloat(idx1 + 1));
-                                        t.setFloat(idx3, a.getFloat(idx1 + 2));
-                                        t.setFloat(idx3 + 1, a.getFloat(idx1 + 3));
-                                        t.setFloat(idx4, a.getFloat(idx1 + 4));
-                                        t.setFloat(idx4 + 1, a.getFloat(idx1 + 5));
-                                        t.setFloat(idx5, a.getFloat(idx1 + 6));
-                                        t.setFloat(idx5 + 1, a.getFloat(idx1 + 7));
-                                    }
-                                    fftSlices.complexInverse(t, 0, scale);
-                                    fftSlices.complexInverse(t, 2 * slicesl, scale);
-                                    fftSlices.complexInverse(t, 4 * slicesl, scale);
-                                    fftSlices.complexInverse(t, 6 * slicesl, scale);
-                                    for (long s = 0; s < slicesl; s++) {
-                                        idx1 = s * sliceStridel + idx0 + c;
-                                        idx2 = 2 * s;
-                                        idx3 = 2 * slicesl + 2 * s;
-                                        idx4 = idx3 + 2 * slicesl;
-                                        idx5 = idx4 + 2 * slicesl;
-                                        a.setFloat(idx1, t.getFloat(idx2));
-                                        a.setFloat(idx1 + 1, t.getFloat(idx2 + 1));
-                                        a.setFloat(idx1 + 2, t.getFloat(idx3));
-                                        a.setFloat(idx1 + 3, t.getFloat(idx3 + 1));
-                                        a.setFloat(idx1 + 4, t.getFloat(idx4));
-                                        a.setFloat(idx1 + 5, t.getFloat(idx4 + 1));
-                                        a.setFloat(idx1 + 6, t.getFloat(idx5));
-                                        a.setFloat(idx1 + 7, t.getFloat(idx5 + 1));
-                                    }
-                                }
-                            }
-                        } else if (columnsl == 4) {
-                            for (long r = n0; r < rowsl; r += nthreads) {
-                                idx0 = r * rowStridel;
+                    } else if (columnsl > 4) {
+                        for (long r = n0; r < rowsl; r += nthreads) {
+                            idx0 = r * rowStridel;
+                            for (long c = 0; c < columnsl; c += 8) {
                                 for (long s = 0; s < slicesl; s++) {
-                                    idx1 = s * sliceStridel + idx0;
+                                    idx1 = s * sliceStridel + idx0 + c;
                                     idx2 = 2 * s;
                                     idx3 = 2 * slicesl + 2 * s;
+                                    idx4 = idx3 + 2 * slicesl;
+                                    idx5 = idx4 + 2 * slicesl;
                                     t.setFloat(idx2, a.getFloat(idx1));
                                     t.setFloat(idx2 + 1, a.getFloat(idx1 + 1));
                                     t.setFloat(idx3, a.getFloat(idx1 + 2));
                                     t.setFloat(idx3 + 1, a.getFloat(idx1 + 3));
+                                    t.setFloat(idx4, a.getFloat(idx1 + 4));
+                                    t.setFloat(idx4 + 1, a.getFloat(idx1 + 5));
+                                    t.setFloat(idx5, a.getFloat(idx1 + 6));
+                                    t.setFloat(idx5 + 1, a.getFloat(idx1 + 7));
                                 }
                                 fftSlices.complexInverse(t, 0, scale);
                                 fftSlices.complexInverse(t, 2 * slicesl, scale);
+                                fftSlices.complexInverse(t, 4 * slicesl, scale);
+                                fftSlices.complexInverse(t, 6 * slicesl, scale);
                                 for (long s = 0; s < slicesl; s++) {
-                                    idx1 = s * sliceStridel + idx0;
+                                    idx1 = s * sliceStridel + idx0 + c;
                                     idx2 = 2 * s;
                                     idx3 = 2 * slicesl + 2 * s;
+                                    idx4 = idx3 + 2 * slicesl;
+                                    idx5 = idx4 + 2 * slicesl;
                                     a.setFloat(idx1, t.getFloat(idx2));
                                     a.setFloat(idx1 + 1, t.getFloat(idx2 + 1));
                                     a.setFloat(idx1 + 2, t.getFloat(idx3));
                                     a.setFloat(idx1 + 3, t.getFloat(idx3 + 1));
+                                    a.setFloat(idx1 + 4, t.getFloat(idx4));
+                                    a.setFloat(idx1 + 5, t.getFloat(idx4 + 1));
+                                    a.setFloat(idx1 + 6, t.getFloat(idx5));
+                                    a.setFloat(idx1 + 7, t.getFloat(idx5 + 1));
                                 }
                             }
-                        } else if (columnsl == 2) {
-                            for (long r = n0; r < rowsl; r += nthreads) {
-                                idx0 = r * rowStridel;
-                                for (long s = 0; s < slicesl; s++) {
-                                    idx1 = s * sliceStridel + idx0;
-                                    idx2 = 2 * s;
-                                    t.setFloat(idx2, a.getFloat(idx1));
-                                    t.setFloat(idx2 + 1, a.getFloat(idx1 + 1));
-                                }
-                                fftSlices.complexInverse(t, 0, scale);
-                                for (long s = 0; s < slicesl; s++) {
-                                    idx1 = s * sliceStridel + idx0;
-                                    idx2 = 2 * s;
-                                    a.setFloat(idx1, t.getFloat(idx2));
-                                    a.setFloat(idx1 + 1, t.getFloat(idx2 + 1));
-                                }
+                        }
+                    } else if (columnsl == 4) {
+                        for (long r = n0; r < rowsl; r += nthreads) {
+                            idx0 = r * rowStridel;
+                            for (long s = 0; s < slicesl; s++) {
+                                idx1 = s * sliceStridel + idx0;
+                                idx2 = 2 * s;
+                                idx3 = 2 * slicesl + 2 * s;
+                                t.setFloat(idx2, a.getFloat(idx1));
+                                t.setFloat(idx2 + 1, a.getFloat(idx1 + 1));
+                                t.setFloat(idx3, a.getFloat(idx1 + 2));
+                                t.setFloat(idx3 + 1, a.getFloat(idx1 + 3));
+                            }
+                            fftSlices.complexInverse(t, 0, scale);
+                            fftSlices.complexInverse(t, 2 * slicesl, scale);
+                            for (long s = 0; s < slicesl; s++) {
+                                idx1 = s * sliceStridel + idx0;
+                                idx2 = 2 * s;
+                                idx3 = 2 * slicesl + 2 * s;
+                                a.setFloat(idx1, t.getFloat(idx2));
+                                a.setFloat(idx1 + 1, t.getFloat(idx2 + 1));
+                                a.setFloat(idx1 + 2, t.getFloat(idx3));
+                                a.setFloat(idx1 + 3, t.getFloat(idx3 + 1));
+                            }
+                        }
+                    } else if (columnsl == 2) {
+                        for (long r = n0; r < rowsl; r += nthreads) {
+                            idx0 = r * rowStridel;
+                            for (long s = 0; s < slicesl; s++) {
+                                idx1 = s * sliceStridel + idx0;
+                                idx2 = 2 * s;
+                                t.setFloat(idx2, a.getFloat(idx1));
+                                t.setFloat(idx2 + 1, a.getFloat(idx1 + 1));
+                            }
+                            fftSlices.complexInverse(t, 0, scale);
+                            for (long s = 0; s < slicesl; s++) {
+                                idx1 = s * sliceStridel + idx0;
+                                idx2 = 2 * s;
+                                a.setFloat(idx1, t.getFloat(idx2));
+                                a.setFloat(idx1 + 1, t.getFloat(idx2 + 1));
                             }
                         }
                     }
@@ -6223,12 +6719,19 @@ public class FloatFFT_3D {
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void cdft3db_subth(final int isgn, final float[][][] a, final boolean scale) {
+    private void cdft3db_subth(final int isgn, final float[][][] a, final boolean scale)
+    {
         int i;
-        final int nthreads = Math.min(ConcurrencyUtils.getNumberOfThreads(), rows);
+        final int nthreads = min(ConcurrencyUtils.getNumberOfThreads(), rows);
         int nt = slices;
         if (nt < rows) {
             nt = rows;
@@ -6243,9 +6746,11 @@ public class FloatFFT_3D {
         Future<?>[] futures = new Future[nthreads];
         for (i = 0; i < nthreads; i++) {
             final int n0 = i;
-            futures[i] = ConcurrencyUtils.submit(new Runnable() {
+            futures[i] = ConcurrencyUtils.submit(new Runnable()
+            {
 
-                public void run() {
+                public void run()
+                {
                     int idx2, idx3, idx4, idx5;
                     float[] t = new float[ntf];
                     if (isgn == -1) {
@@ -6322,78 +6827,76 @@ public class FloatFFT_3D {
                                 }
                             }
                         }
-                    } else {
-                        if (columns > 4) {
-                            for (int r = n0; r < rows; r += nthreads) {
-                                for (int c = 0; c < columns; c += 8) {
-                                    for (int s = 0; s < slices; s++) {
-                                        idx2 = 2 * s;
-                                        idx3 = 2 * slices + 2 * s;
-                                        idx4 = idx3 + 2 * slices;
-                                        idx5 = idx4 + 2 * slices;
-                                        t[idx2] = a[s][r][c];
-                                        t[idx2 + 1] = a[s][r][c + 1];
-                                        t[idx3] = a[s][r][c + 2];
-                                        t[idx3 + 1] = a[s][r][c + 3];
-                                        t[idx4] = a[s][r][c + 4];
-                                        t[idx4 + 1] = a[s][r][c + 5];
-                                        t[idx5] = a[s][r][c + 6];
-                                        t[idx5 + 1] = a[s][r][c + 7];
-                                    }
-                                    fftSlices.complexInverse(t, 0, scale);
-                                    fftSlices.complexInverse(t, 2 * slices, scale);
-                                    fftSlices.complexInverse(t, 4 * slices, scale);
-                                    fftSlices.complexInverse(t, 6 * slices, scale);
-                                    for (int s = 0; s < slices; s++) {
-                                        idx2 = 2 * s;
-                                        idx3 = 2 * slices + 2 * s;
-                                        idx4 = idx3 + 2 * slices;
-                                        idx5 = idx4 + 2 * slices;
-                                        a[s][r][c] = t[idx2];
-                                        a[s][r][c + 1] = t[idx2 + 1];
-                                        a[s][r][c + 2] = t[idx3];
-                                        a[s][r][c + 3] = t[idx3 + 1];
-                                        a[s][r][c + 4] = t[idx4];
-                                        a[s][r][c + 5] = t[idx4 + 1];
-                                        a[s][r][c + 6] = t[idx5];
-                                        a[s][r][c + 7] = t[idx5 + 1];
-                                    }
-                                }
-                            }
-                        } else if (columns == 4) {
-                            for (int r = n0; r < rows; r += nthreads) {
+                    } else if (columns > 4) {
+                        for (int r = n0; r < rows; r += nthreads) {
+                            for (int c = 0; c < columns; c += 8) {
                                 for (int s = 0; s < slices; s++) {
                                     idx2 = 2 * s;
                                     idx3 = 2 * slices + 2 * s;
-                                    t[idx2] = a[s][r][0];
-                                    t[idx2 + 1] = a[s][r][1];
-                                    t[idx3] = a[s][r][2];
-                                    t[idx3 + 1] = a[s][r][3];
+                                    idx4 = idx3 + 2 * slices;
+                                    idx5 = idx4 + 2 * slices;
+                                    t[idx2] = a[s][r][c];
+                                    t[idx2 + 1] = a[s][r][c + 1];
+                                    t[idx3] = a[s][r][c + 2];
+                                    t[idx3 + 1] = a[s][r][c + 3];
+                                    t[idx4] = a[s][r][c + 4];
+                                    t[idx4 + 1] = a[s][r][c + 5];
+                                    t[idx5] = a[s][r][c + 6];
+                                    t[idx5 + 1] = a[s][r][c + 7];
                                 }
                                 fftSlices.complexInverse(t, 0, scale);
                                 fftSlices.complexInverse(t, 2 * slices, scale);
+                                fftSlices.complexInverse(t, 4 * slices, scale);
+                                fftSlices.complexInverse(t, 6 * slices, scale);
                                 for (int s = 0; s < slices; s++) {
                                     idx2 = 2 * s;
                                     idx3 = 2 * slices + 2 * s;
-                                    a[s][r][0] = t[idx2];
-                                    a[s][r][1] = t[idx2 + 1];
-                                    a[s][r][2] = t[idx3];
-                                    a[s][r][3] = t[idx3 + 1];
+                                    idx4 = idx3 + 2 * slices;
+                                    idx5 = idx4 + 2 * slices;
+                                    a[s][r][c] = t[idx2];
+                                    a[s][r][c + 1] = t[idx2 + 1];
+                                    a[s][r][c + 2] = t[idx3];
+                                    a[s][r][c + 3] = t[idx3 + 1];
+                                    a[s][r][c + 4] = t[idx4];
+                                    a[s][r][c + 5] = t[idx4 + 1];
+                                    a[s][r][c + 6] = t[idx5];
+                                    a[s][r][c + 7] = t[idx5 + 1];
                                 }
                             }
-                        } else if (columns == 2) {
-                            for (int r = n0; r < rows; r += nthreads) {
-                                for (int s = 0; s < slices; s++) {
-                                    idx2 = 2 * s;
-                                    t[idx2] = a[s][r][0];
-                                    t[idx2 + 1] = a[s][r][1];
-                                }
-                                fftSlices.complexInverse(t, 0, scale);
-                                for (int s = 0; s < slices; s++) {
-                                    idx2 = 2 * s;
-                                    a[s][r][0] = t[idx2];
-                                    a[s][r][1] = t[idx2 + 1];
-                                }
+                        }
+                    } else if (columns == 4) {
+                        for (int r = n0; r < rows; r += nthreads) {
+                            for (int s = 0; s < slices; s++) {
+                                idx2 = 2 * s;
+                                idx3 = 2 * slices + 2 * s;
+                                t[idx2] = a[s][r][0];
+                                t[idx2 + 1] = a[s][r][1];
+                                t[idx3] = a[s][r][2];
+                                t[idx3 + 1] = a[s][r][3];
+                            }
+                            fftSlices.complexInverse(t, 0, scale);
+                            fftSlices.complexInverse(t, 2 * slices, scale);
+                            for (int s = 0; s < slices; s++) {
+                                idx2 = 2 * s;
+                                idx3 = 2 * slices + 2 * s;
+                                a[s][r][0] = t[idx2];
+                                a[s][r][1] = t[idx2 + 1];
+                                a[s][r][2] = t[idx3];
+                                a[s][r][3] = t[idx3 + 1];
+                            }
+                        }
+                    } else if (columns == 2) {
+                        for (int r = n0; r < rows; r += nthreads) {
+                            for (int s = 0; s < slices; s++) {
+                                idx2 = 2 * s;
+                                t[idx2] = a[s][r][0];
+                                t[idx2 + 1] = a[s][r][1];
+                            }
+                            fftSlices.complexInverse(t, 0, scale);
+                            for (int s = 0; s < slices; s++) {
+                                idx2 = 2 * s;
+                                a[s][r][0] = t[idx2];
+                                a[s][r][1] = t[idx2 + 1];
                             }
                         }
                     }
@@ -6401,10 +6904,17 @@ public class FloatFFT_3D {
                 }
             });
         }
-        ConcurrencyUtils.waitForCompletion(futures);
+        try {
+            ConcurrencyUtils.waitForCompletion(futures);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ExecutionException ex) {
+            Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
-    private void rdft3d_sub(int isgn, float[] a) {
+    private void rdft3d_sub(int isgn, float[] a)
+    {
         int n1h, n2h, i, j, k, l, idx1, idx2, idx3, idx4;
         float xi;
 
@@ -6517,7 +7027,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void rdft3d_sub(int isgn, FloatLargeArray a) {
+    private void rdft3d_sub(int isgn, FloatLargeArray a)
+    {
         long n1h, n2h, i, j, k, l, idx1, idx2, idx3, idx4;
         float xi;
 
@@ -6630,7 +7141,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void rdft3d_sub(int isgn, float[][][] a) {
+    private void rdft3d_sub(int isgn, float[][][] a)
+    {
         int n1h, n2h, i, j, k, l;
         float xi;
 
@@ -6719,7 +7231,8 @@ public class FloatFFT_3D {
         }
     }
 
-    private void fillSymmetric(final float[][][] a) {
+    private void fillSymmetric(final float[][][] a)
+    {
         final int twon3 = 2 * columns;
         final int n2d2 = rows / 2;
         int n1d2 = slices / 2;
@@ -6730,8 +7243,10 @@ public class FloatFFT_3D {
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx1 = (slices - s) % slices;
                             for (int r = 0; r < rows; r++) {
@@ -6746,14 +7261,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             // ---------------------------------------------
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx1 = (slices - s) % slices;
                             for (int r = 1; r < n2d2; r++) {
@@ -6767,13 +7290,21 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx1 = (slices - s) % slices;
                             for (int r = 1; r < n2d2; r++) {
@@ -6785,7 +7316,13 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
         } else {
 
@@ -6854,7 +7391,8 @@ public class FloatFFT_3D {
         a[n1d2][n2d2][columns + 1] = 0;
     }
 
-    private void fillSymmetric(final float[] a) {
+    private void fillSymmetric(final float[] a)
+    {
         final int twon3 = 2 * columns;
         final int n2d2 = rows / 2;
         int n1d2 = slices / 2;
@@ -6905,8 +7443,10 @@ public class FloatFFT_3D {
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx3 = ((slices - s) % slices) * twoSliceStride;
                             int idx5 = s * twoSliceStride;
@@ -6924,14 +7464,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             // ---------------------------------------------
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx5 = ((slices - s) % slices) * twoSliceStride;
                             int idx6 = s * twoSliceStride;
@@ -6950,12 +7498,20 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
             for (int l = 0; l < nthreads; l++) {
                 final int firstSlice = l * p;
                 final int lastSlice = (l == (nthreads - 1)) ? slices : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (int s = firstSlice; s < lastSlice; s++) {
                             int idx3 = ((slices - s) % slices) * twoSliceStride;
                             int idx4 = s * twoSliceStride;
@@ -6970,7 +7526,13 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
 
             // -----------------------------------------------
@@ -7057,7 +7619,8 @@ public class FloatFFT_3D {
         a[idx3 + columns + 1] = 0;
     }
 
-    private void fillSymmetric(final FloatLargeArray a) {
+    private void fillSymmetric(final FloatLargeArray a)
+    {
         final long twon3 = 2 * columnsl;
         final long n2d2 = rowsl / 2;
         long n1d2 = slicesl / 2;
@@ -7108,8 +7671,10 @@ public class FloatFFT_3D {
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long s = firstSlice; s < lastSlice; s++) {
                             long idx3 = ((slicesl - s) % slicesl) * twoSliceStride;
                             long idx5 = s * twoSliceStride;
@@ -7127,14 +7692,22 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
             // ---------------------------------------------
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long s = firstSlice; s < lastSlice; s++) {
                             long idx5 = ((slicesl - s) % slicesl) * twoSliceStride;
                             long idx6 = s * twoSliceStride;
@@ -7153,12 +7726,20 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
             for (int l = 0; l < nthreads; l++) {
                 final long firstSlice = l * p;
                 final long lastSlice = (l == (nthreads - 1)) ? slicesl : firstSlice + p;
-                futures[l] = ConcurrencyUtils.submit(new Runnable() {
-                    public void run() {
+                futures[l] = ConcurrencyUtils.submit(new Runnable()
+                {
+                    public void run()
+                    {
                         for (long s = firstSlice; s < lastSlice; s++) {
                             long idx3 = ((slicesl - s) % slicesl) * twoSliceStride;
                             long idx4 = s * twoSliceStride;
@@ -7173,7 +7754,13 @@ public class FloatFFT_3D {
                     }
                 });
             }
-            ConcurrencyUtils.waitForCompletion(futures);
+            try {
+                ConcurrencyUtils.waitForCompletion(futures);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (ExecutionException ex) {
+                Logger.getLogger(FloatFFT_3D.class.getName()).log(Level.SEVERE, null, ex);
+            }
         } else {
 
             // -----------------------------------------------

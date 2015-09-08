@@ -29,7 +29,8 @@ package org.jtransforms.dst;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
-import org.jtransforms.utils.ConcurrencyUtils;
+import org.jtransforms.utils.CommonUtils;
+import pl.edu.icm.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,6 +38,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import pl.edu.icm.jlargearrays.DoubleLargeArray;
+import pl.edu.icm.jlargearrays.LargeArray;
+import static org.apache.commons.math3.util.FastMath.*;
 
 /**
  * This is a series of JUnit tests for the {@link DoubleDST_1D}.
@@ -44,7 +47,8 @@ import pl.edu.icm.jlargearrays.DoubleLargeArray;
  * @author Piotr Wendykier
  */
 @RunWith(value = Parameterized.class)
-public class DoubleDST_1DTest {
+public class DoubleDST_1DTest
+{
 
     /**
      * Base message of all exceptions.
@@ -56,13 +60,14 @@ public class DoubleDST_1DTest {
      */
     public static final int SEED = 20110602;
 
-    private static final double EPS = Math.pow(10, -12);
+    private static final double EPS = pow(10, -12);
 
     @Parameters
-    public static Collection<Object[]> getParameters() {
+    public static Collection<Object[]> getParameters()
+    {
         final int[] size = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 32,
-            64, 100, 120, 128, 256, 310, 512, 1024, 1056, 2048, 8192,
-            10158, 16384, 32768, 65530, 65536, 131072};
+                            64, 100, 120, 128, 256, 310, 512, 1024, 1056, 2048, 8192,
+                            10158, 16384, 32768, 65530, 65536, 131072};
 
         final ArrayList<Object[]> parameters = new ArrayList<Object[]>();
         for (int i = 0; i < size.length; i++) {
@@ -96,16 +101,18 @@ public class DoubleDST_1DTest {
     /**
      * Creates a new instance of this class.
      *
-     * @param n the size of the DST to be tested
+     * @param n          the size of the DST to be tested
      * @param numThreads the number of threads
-     * @param seed the seed of the random generator
+     * @param seed       the seed of the random generator
      */
-    public DoubleDST_1DTest(final int n, final int numThreads, final long seed) {
+    public DoubleDST_1DTest(final int n, final int numThreads, final long seed)
+    {
         this.n = n;
+        LargeArray.setMaxSizeOf32bitArray(1);
         this.dst = new DoubleDST_1D(n);
         this.random = new Random(seed);
-        ConcurrencyUtils.setThreadsBeginN_1D_FFT_2Threads(1024);
-        ConcurrencyUtils.setThreadsBeginN_1D_FFT_4Threads(1024);
+        CommonUtils.setThreadsBeginN_1D_FFT_2Threads(1024);
+        CommonUtils.setThreadsBeginN_1D_FFT_4Threads(1024);
         ConcurrencyUtils.setNumberOfThreads(numThreads);
         this.numThreads = ConcurrencyUtils.getNumberOfThreads();
     }
@@ -116,7 +123,8 @@ public class DoubleDST_1DTest {
      * set to <code>true</code>.
      */
     @Test
-    public void testScaled() {
+    public void testScaled()
+    {
         final double[] actual = new double[n];
         final double[] expected = new double[n];
         for (int i = 0; i < n; i++) {
@@ -136,10 +144,10 @@ public class DoubleDST_1DTest {
      * parameter set to <code>true</code>.
      */
     @Test
-    public void testScaledLarge() {
-        ConcurrencyUtils.setLargeArraysBeginN(n);
-        final DoubleLargeArray actual = new DoubleLargeArray(n, false);
-        final DoubleLargeArray expected = new DoubleLargeArray(n, false);
+    public void testScaledLarge()
+    {
+        final DoubleLargeArray actual = new DoubleLargeArray(n);
+        final DoubleLargeArray expected = new DoubleLargeArray(n);
         for (int i = 0; i < n; i++) {
             actual.setDouble(i, 2. * random.nextDouble() - 1.);
             expected.setDouble(i, actual.getDouble(i));
