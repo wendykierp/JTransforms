@@ -7,22 +7,20 @@ Discrete Cosine Transform (DCT), Discrete Sine Transform (DST) and Discrete Hart
 The code is derived from General Purpose FFT Package written by Takuya Ooura and 
 from Java FFTPack written by Baoshe Zhang. 
 
-### JTransforms 3.0
+### JTransforms 3.1
 
-[JTransforms-3.0.jar](http://search.maven.org/remotecontent?filepath=com/github/wendykierp/JTransforms/3.0/JTransforms-3.0.jar) 
+[JTransforms-3.1-with-dependencies.jar](http://search.maven.org/remotecontent?filepath=com/github/wendykierp/JTransforms/3.1/JTransforms-3.1-with-dependencies.jar) 
 
-[JLargeArrays-1.2.jar (dependency)](http://search.maven.org/remotecontent?filepath=pl/edu/icm/JLargeArrays/1.2/JLargeArrays-1.2.jar) 
+[JTransforms-3.1-javadoc.jar](http://search.maven.org/remotecontent?filepath=com/github/wendykierp/JTransforms/3.1/JTransforms-3.1-javadoc.jar) 
 
-[JTransforms-3.0-javadoc.jar](http://search.maven.org/remotecontent?filepath=com/github/wendykierp/JTransforms/3.0/JTransforms-3.0-javadoc.jar) 
-
-[JTransforms-3.0-sources.jar](http://search.maven.org/remotecontent?filepath=com/github/wendykierp/JTransforms/3.0/JTransforms-3.0-sources.jar) 
+[JTransforms-3.1-sources.jar](http://search.maven.org/remotecontent?filepath=com/github/wendykierp/JTransforms/3.1/JTransforms-3.1-sources.jar) 
 
 JTransforms is available on maven central as
 
         <dependency>
             <groupId>com.github.wendykierp</groupId>
             <artifactId>JTransforms</artifactId>
-            <version>3.0</version>
+            <version>3.1</version>
         </dependency>
 
 ## Benchmarks
