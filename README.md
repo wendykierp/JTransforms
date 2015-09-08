@@ -21,6 +21,7 @@ JTransforms is available on maven central as
             <groupId>com.github.wendykierp</groupId>
             <artifactId>JTransforms</artifactId>
             <version>3.1</version>
+            <classifier>with-dependencies</classifier>
         </dependency>
 
 ## Benchmarks
