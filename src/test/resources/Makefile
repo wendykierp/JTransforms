@@ -1,11 +1,15 @@
-fftwdir = "E:\devel\fftw-3.2.2"
+LDFLAGS = -lm -lfftw3
 
-CC = gcc
-CFLAGS = -I$(fftwdir)
-LDFLAGS = -L$(fftwdir) -lm -lfftw3-3
+XTRA_CFLAGS = $(shell pkg-config --cflags fftw3)
+XTRA_LDFLAGS = -lm $(shell pkg-config --libs fftw3)
 
 all: genref1d
+
 genref1d.o: genref1d.c
-	gcc -c genref1d.c $(CFLAGS)
+	$(CC) -c genref1d.c $(XTRA_CFLAGS)
+
 genref1d: genref1d.o
-	gcc -o genref1d genref1d.o $(LDFLAGS)
+	$(CC) -o genref1d genref1d.o $(XTRA_LDFLAGS)
+
+clean:
+	$(RM) genref1d genref1d.o
