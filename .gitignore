@@ -1,3 +1,6 @@
 /target/
 /nbactions.xml
 /nb-configuration.xml
+/src/test/resources/genref1d.exe
+/src/test/resources/genref1d.o
+/src/test/resources/genref1d
