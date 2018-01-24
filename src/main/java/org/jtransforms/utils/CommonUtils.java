@@ -69,6 +69,7 @@ public class CommonUtils
         try {
             Thread.sleep(millis);
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             e.printStackTrace();
         }
     }
@@ -3786,6 +3787,7 @@ public class CommonUtils
         try {
             ConcurrencyUtils.waitForCompletion(futures);
         } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
             Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ExecutionException ex) {
             Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
@@ -3860,6 +3862,7 @@ public class CommonUtils
         try {
             ConcurrencyUtils.waitForCompletion(futures);
         } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
             Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ExecutionException ex) {
             Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
@@ -8984,6 +8987,7 @@ public class CommonUtils
         try {
             ConcurrencyUtils.waitForCompletion(futures);
         } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
             Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ExecutionException ex) {
             Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
@@ -9058,6 +9062,7 @@ public class CommonUtils
         try {
             ConcurrencyUtils.waitForCompletion(futures);
         } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
             Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ExecutionException ex) {
             Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
@@ -11130,6 +11135,7 @@ public class CommonUtils
             try {
                 ConcurrencyUtils.waitForCompletion(futures);
             } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
                 Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
             } catch (ExecutionException ex) {
                 Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
@@ -11172,6 +11178,7 @@ public class CommonUtils
             try {
                 ConcurrencyUtils.waitForCompletion(futures);
             } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
                 Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
             } catch (ExecutionException ex) {
                 Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
@@ -11214,6 +11221,7 @@ public class CommonUtils
             try {
                 ConcurrencyUtils.waitForCompletion(futures);
             } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
                 Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
             } catch (ExecutionException ex) {
                 Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
@@ -11256,6 +11264,7 @@ public class CommonUtils
             try {
                 ConcurrencyUtils.waitForCompletion(futures);
             } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
                 Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
             } catch (ExecutionException ex) {
                 Logger.getLogger(CommonUtils.class.getName()).log(Level.SEVERE, null, ex);
