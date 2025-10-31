@@ -31,8 +31,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Random;
-import pl.edu.icm.jlargearrays.DoubleLargeArray;
-import pl.edu.icm.jlargearrays.FloatLargeArray;
+import org.visnow.jlargearrays.DoubleLargeArray;
+import org.visnow.jlargearrays.FloatLargeArray;
 import static org.apache.commons.math3.util.FastMath.*;
 
 /**

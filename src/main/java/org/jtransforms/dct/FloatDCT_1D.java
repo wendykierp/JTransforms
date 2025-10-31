@@ -32,11 +32,11 @@ import org.jtransforms.utils.CommonUtils;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import pl.edu.icm.jlargearrays.ConcurrencyUtils;
-import pl.edu.icm.jlargearrays.FloatLargeArray;
-import pl.edu.icm.jlargearrays.LargeArray;
-import pl.edu.icm.jlargearrays.LongLargeArray;
-import pl.edu.icm.jlargearrays.LargeArrayUtils;
+import org.visnow.jlargearrays.ConcurrencyUtils;
+import org.visnow.jlargearrays.FloatLargeArray;
+import org.visnow.jlargearrays.LargeArray;
+import org.visnow.jlargearrays.LongLargeArray;
+import org.visnow.jlargearrays.LargeArrayUtils;
 import static org.apache.commons.math3.util.FastMath.*;
 
 /**

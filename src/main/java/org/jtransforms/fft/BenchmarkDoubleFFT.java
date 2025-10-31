@@ -28,9 +28,9 @@ package org.jtransforms.fft;
 
 import java.util.Arrays;
 import org.jtransforms.utils.CommonUtils;
-import pl.edu.icm.jlargearrays.ConcurrencyUtils;
+import org.visnow.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
-import pl.edu.icm.jlargearrays.DoubleLargeArray;
+import org.visnow.jlargearrays.DoubleLargeArray;
 import static org.apache.commons.math3.util.FastMath.*;
 
 /**

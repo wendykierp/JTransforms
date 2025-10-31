@@ -31,9 +31,9 @@ import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jtransforms.utils.CommonUtils;
-import pl.edu.icm.jlargearrays.ConcurrencyUtils;
-import pl.edu.icm.jlargearrays.DoubleLargeArray;
-import pl.edu.icm.jlargearrays.LargeArray;
+import org.visnow.jlargearrays.ConcurrencyUtils;
+import org.visnow.jlargearrays.DoubleLargeArray;
+import org.visnow.jlargearrays.LargeArray;
 import static org.apache.commons.math3.util.FastMath.*;
 
 /**

@@ -32,10 +32,10 @@ import org.jtransforms.utils.CommonUtils;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import pl.edu.icm.jlargearrays.ConcurrencyUtils;
-import pl.edu.icm.jlargearrays.DoubleLargeArray;
-import pl.edu.icm.jlargearrays.LargeArray;
-import pl.edu.icm.jlargearrays.LargeArrayUtils;
+import org.visnow.jlargearrays.ConcurrencyUtils;
+import org.visnow.jlargearrays.DoubleLargeArray;
+import org.visnow.jlargearrays.LargeArray;
+import org.visnow.jlargearrays.LargeArrayUtils;
 
 /**
  * Computes 1D Discrete Hartley Transform (DHT) of real, double precision data.
