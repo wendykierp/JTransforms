@@ -4,7 +4,7 @@
     <groupId>com.github.wendykierp</groupId>
     <artifactId>JTransforms</artifactId>
     <name>JTransforms</name>
-    <version>3.2-SNAPSHOT</version>
+    <version>3.2</version>
     <packaging>jar</packaging>
     
     <description>JTransforms is the first, open source, multithreaded FFT library written in pure Java.</description>
@@ -171,7 +171,7 @@
         <connection>scm:git:https://github.com/wendykierp/JTransforms.git</connection>
         <developerConnection>scm:git:https://github.com/wendykierp/JTransforms.git</developerConnection>
         <url>https://github.com/wendykierp/JTransforms</url>
-        <tag>HEAD</tag>
+        <tag>JTransforms-3.2</tag>
     </scm>
     
 </project>
