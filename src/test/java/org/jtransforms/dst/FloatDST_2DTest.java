@@ -39,7 +39,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.visnow.jlargearrays.FloatLargeArray;
 import org.visnow.jlargearrays.LargeArray;
-import static org.apache.commons.math3.util.FastMath.*;
+import static java.lang.Math.*;
 
 /**
  * This is a series of JUnit tests for the {@link FloatDST_2D}.

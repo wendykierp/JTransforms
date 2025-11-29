@@ -37,7 +37,7 @@ import org.visnow.jlargearrays.FloatLargeArray;
 import org.visnow.jlargearrays.LargeArray;
 import org.visnow.jlargearrays.LongLargeArray;
 import org.visnow.jlargearrays.LargeArrayUtils;
-import static org.apache.commons.math3.util.FastMath.*;
+import static java.lang.Math.*;
 
 /**
  * Computes 1D Discrete Cosine Transform (DCT) of single precision data. The

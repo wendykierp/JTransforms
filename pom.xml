@@ -159,11 +159,7 @@
             <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-math3</artifactId>
-            <version>3.6.1</version>
-        </dependency>
+        
         <dependency>
             <groupId>org.visnow</groupId>
             <artifactId>JLargeArrays</artifactId>

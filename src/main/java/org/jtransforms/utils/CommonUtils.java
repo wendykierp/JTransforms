@@ -30,7 +30,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import static org.apache.commons.math3.util.FastMath.*;
+import static java.lang.Math.*;
 import org.visnow.jlargearrays.ConcurrencyUtils;
 import org.visnow.jlargearrays.DoubleLargeArray;
 import org.visnow.jlargearrays.FloatLargeArray;

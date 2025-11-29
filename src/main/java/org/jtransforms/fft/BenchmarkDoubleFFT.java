@@ -31,7 +31,7 @@ import org.jtransforms.utils.CommonUtils;
 import org.visnow.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.visnow.jlargearrays.DoubleLargeArray;
-import static org.apache.commons.math3.util.FastMath.*;
+import static java.lang.Math.*;
 
 /**
  * Benchmark of single precision FFT's

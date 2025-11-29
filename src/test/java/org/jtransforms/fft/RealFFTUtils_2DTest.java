@@ -38,7 +38,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.visnow.jlargearrays.DoubleLargeArray;
 import org.visnow.jlargearrays.FloatLargeArray;
-import static org.apache.commons.math3.util.FastMath.*;
+import static java.lang.Math.*;
 
 /**
  * Test of the utility class {@link RealFFTUtils_2D}.

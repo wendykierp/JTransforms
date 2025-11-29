@@ -29,7 +29,7 @@ package org.jtransforms.fft;
 // @formatter:off
 import org.visnow.jlargearrays.DoubleLargeArray;
 import org.visnow.jlargearrays.FloatLargeArray;
-import static org.apache.commons.math3.util.FastMath.*;
+import static java.lang.Math.*;
 
 /**
  *
