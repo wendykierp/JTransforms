@@ -1,5 +1,11 @@
 JTransforms changelog
 
+3.2:    November 29, 2025
+    - Preserved interrupted flag on InterruptedExceptions.
+    - Fixed bug in CommonUtils.sleep.
+    - Removed the Apache Commons Mathematics Library as a dependency. 
+    - Updated JLargeArrays dependency to version 1.7.
+
 3.1:    September 8, 2015
     - Fixed unreported bugs.
     - Added the Apache Commons Mathematics Library as a dependency. 
