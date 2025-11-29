@@ -30,16 +30,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
 import org.jtransforms.utils.CommonUtils;
-import pl.edu.icm.jlargearrays.ConcurrencyUtils;
+import org.visnow.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import pl.edu.icm.jlargearrays.DoubleLargeArray;
-import pl.edu.icm.jlargearrays.LargeArray;
-import static org.apache.commons.math3.util.FastMath.*;
+import org.visnow.jlargearrays.DoubleLargeArray;
+import org.visnow.jlargearrays.LargeArray;
+import static java.lang.Math.*;
 
 /**
  *

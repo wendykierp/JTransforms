@@ -43,11 +43,11 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import org.jtransforms.utils.CommonUtils;
-import pl.edu.icm.jlargearrays.ConcurrencyUtils;
+import org.visnow.jlargearrays.ConcurrencyUtils;
 import org.jtransforms.utils.IOUtils;
-import pl.edu.icm.jlargearrays.DoubleLargeArray;
-import pl.edu.icm.jlargearrays.LargeArray;
-import static org.apache.commons.math3.util.FastMath.*;
+import org.visnow.jlargearrays.DoubleLargeArray;
+import org.visnow.jlargearrays.LargeArray;
+import static java.lang.Math.*;
 
 /**
  * This is a series of JUnit tests for the {@link DoubleFFT_1D}. First,

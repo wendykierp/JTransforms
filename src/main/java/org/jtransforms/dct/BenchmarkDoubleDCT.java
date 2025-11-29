@@ -29,8 +29,8 @@ package org.jtransforms.dct;
 import java.util.Arrays;
 import org.jtransforms.utils.CommonUtils;
 import org.jtransforms.utils.IOUtils;
-import pl.edu.icm.jlargearrays.ConcurrencyUtils;
-import pl.edu.icm.jlargearrays.DoubleLargeArray;
+import org.visnow.jlargearrays.ConcurrencyUtils;
+import org.visnow.jlargearrays.DoubleLargeArray;
 
 /**
  * Benchmark of double precision DCT's

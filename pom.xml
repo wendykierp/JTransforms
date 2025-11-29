@@ -3,16 +3,13 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.wendykierp</groupId>
     <artifactId>JTransforms</artifactId>
-    <version>3.2-SNAPSHOT</version>
+    <name>JTransforms</name>
+    <version>3.3-SNAPSHOT</version>
     <packaging>jar</packaging>
     
-    <url>https://github.com/wendykierp/JTransforms</url> 
+    <description>JTransforms is the first, open source, multithreaded FFT library written in pure Java.</description>
     
-    <parent>
-        <groupId>org.sonatype.oss</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>9</version>
-    </parent>
+    <url>https://github.com/wendykierp/JTransforms</url> 
     
     <licenses>
         <license>
@@ -31,30 +28,10 @@
         </developer>
     </developers>
     
-    
-    <dependencies>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.1</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-math3</artifactId>
-            <version>3.5</version>
-        </dependency>
-        <dependency>
-            <groupId>pl.edu.icm</groupId>
-            <artifactId>JLargeArrays</artifactId>
-            <version>1.5</version>
-        </dependency>
-    </dependencies>
-   
-   
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <github.global.server>github</github.global.server>
+        <project.scm.id>github</project.scm.id>
     </properties>
     
     <build>
@@ -71,7 +48,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>2.3</version>
+                <version>3.6.0</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -95,7 +72,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>2.2.1</version>
+                <version>3.3.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -108,7 +85,11 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.9.1</version>
+                <version>3.11.2</version>
+                <configuration>
+                    <source>11</source>
+                    <doclint>all,-missing</doclint>
+                </configuration> 
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -121,10 +102,9 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
+                <version>3.14.0</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <release>11</release>
                     <compilerArgument>-XDignore.symbol.file</compilerArgument>
                     <debug>true</debug>
                 </configuration>
@@ -132,7 +112,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
-                <version>1.5</version>
+                <version>3.2.7</version>
                 <executions>
                     <execution>
                         <id>sign-artifacts</id>
@@ -151,25 +131,45 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
-                <version>2.5</version>
+                <version>3.2.0</version>
+                <configuration>
+                    <arguments>-DskipTests</arguments>
+                    <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <useReleaseProfile>false</useReleaseProfile>
+                    <releaseProfiles>release</releaseProfiles>
+                    <goals>deploy</goals>
+                </configuration>
             </plugin>
             <plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.3</version>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.9.0</version>
                 <extensions>true</extensions>
                 <configuration>
-                    <serverId>ossrh</serverId>
-                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                    <publishingServerId>central</publishingServerId>
                 </configuration>
             </plugin>
         </plugins>
     </build>
     
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.visnow</groupId>
+            <artifactId>JLargeArrays</artifactId>
+            <version>1.7</version>
+        </dependency>
+    </dependencies>
+    
     <scm>
-        <connection>scm:git:ssh://git@github.com/wendykierp/JTransforms.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/wendykierp/JTransforms.git</developerConnection>
+        <connection>scm:git:https://github.com/wendykierp/JTransforms.git</connection>
+        <developerConnection>scm:git:https://github.com/wendykierp/JTransforms.git</developerConnection>
         <url>https://github.com/wendykierp/JTransforms</url>
         <tag>HEAD</tag>
     </scm>

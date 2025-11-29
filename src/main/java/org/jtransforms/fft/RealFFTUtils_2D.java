@@ -27,8 +27,8 @@
 package org.jtransforms.fft;
 
 // @formatter:off
-import pl.edu.icm.jlargearrays.DoubleLargeArray;
-import pl.edu.icm.jlargearrays.FloatLargeArray;
+import org.visnow.jlargearrays.DoubleLargeArray;
+import org.visnow.jlargearrays.FloatLargeArray;
 
 /**
  *
@@ -46,7 +46,7 @@ import pl.edu.icm.jlargearrays.FloatLargeArray;
  * are implemented to handle this case specifically. However, packing of the
  * data in the data array is somewhat obscure. This class provides methods for
  * direct access to the data, without the burden of all necessary tests.
- * <h3>Example for Fourier Transform of real, double precision 1d data</h3>
+ * <h2>Example for Fourier Transform of real, double precision 1d data</h2>
  *  
  * <pre>
  * DoubleFFT_2D fft = new DoubleFFT_2D(rows, columns);
