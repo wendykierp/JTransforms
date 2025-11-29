@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.wendykierp</groupId>
     <artifactId>JTransforms</artifactId>
-    <version>3.2</version>
+    <version>3.3-SNAPSHOT</version>
     <packaging>jar</packaging>
     
     <url>https://github.com/wendykierp/JTransforms</url> 
@@ -172,7 +172,7 @@
         <connection>scm:git:https://github.com/wendykierp/JTransforms.git</connection>
         <developerConnection>scm:git:https://github.com/wendykierp/JTransforms.git</developerConnection>
         <url>https://github.com/wendykierp/JTransforms</url>
-        <tag>JTransforms-3.2</tag>
+        <tag>HEAD</tag>
     </scm>
     
 </project>
