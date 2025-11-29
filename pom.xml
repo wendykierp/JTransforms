@@ -151,13 +151,13 @@
         <dependency>
             <groupId>org.visnow</groupId>
             <artifactId>JLargeArrays</artifactId>
-            <version>1.7-SNAPSHOT</version>
+            <version>1.7</version>
         </dependency>
     </dependencies>
     
     <scm>
-        <connection>scm:git:ssh://git@github.com/wendykierp/JTransforms.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/wendykierp/JTransforms.git</developerConnection>
+        <connection>scm:git:https://github.com/wendykierp/JTransforms.git</connection>
+        <developerConnection>scm:git:https://github.com/wendykierp/JTransforms.git</developerConnection>
         <url>https://github.com/wendykierp/JTransforms</url>
         <tag>HEAD</tag>
     </scm>
