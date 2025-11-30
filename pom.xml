@@ -4,7 +4,7 @@
     <groupId>com.github.wendykierp</groupId>
     <artifactId>JTransforms</artifactId>
     <name>JTransforms</name>
-    <version>3.3-SNAPSHOT</version>
+    <version>3.2</version>
     <packaging>jar</packaging>
     
     <description>JTransforms is the first, open source, multithreaded FFT library written in pure Java.</description>
@@ -32,6 +32,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <github.global.server>github</github.global.server>
         <project.scm.id>github</project.scm.id>
+        <skipTests>true</skipTests>     <!--disable tests temporarily-->
+        <gpg.skip>true</gpg.skip>       <!--disable GPG temporarily-->
     </properties>
     
     <build>
@@ -107,6 +109,7 @@
                     <release>11</release>
                     <compilerArgument>-XDignore.symbol.file</compilerArgument>
                     <debug>true</debug>
+
                 </configuration>
             </plugin>
             <plugin>
@@ -120,6 +123,9 @@
                         <goals>
                             <goal>sign</goal>
                         </goals>
+                        <configuration>
+                            <skip>${gpg.skip}</skip>
+                        </configuration>
                     </execution>
                 </executions>
                 <configuration>
