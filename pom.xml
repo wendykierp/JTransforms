@@ -32,6 +32,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <github.global.server>github</github.global.server>
         <project.scm.id>github</project.scm.id>
+        <skipTests>true</skipTests>     <!--set false to enable tests-->
+        <gpg.skip>true</gpg.skip>       <!--set false to enable GPG-->
     </properties>
     
     <build>
@@ -107,6 +109,7 @@
                     <release>11</release>
                     <compilerArgument>-XDignore.symbol.file</compilerArgument>
                     <debug>true</debug>
+
                 </configuration>
             </plugin>
             <plugin>
@@ -120,6 +123,9 @@
                         <goals>
                             <goal>sign</goal>
                         </goals>
+                        <configuration>
+                            <skip>${gpg.skip}</skip>
+                        </configuration>
                     </execution>
                 </executions>
                 <configuration>
@@ -163,7 +169,7 @@
         <dependency>
             <groupId>org.visnow</groupId>
             <artifactId>JLargeArrays</artifactId>
-            <version>1.7</version>
+            <version>1.8-SNAPSHOT</version>
         </dependency>
     </dependencies>
     
