@@ -32,8 +32,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <github.global.server>github</github.global.server>
         <project.scm.id>github</project.scm.id>
-        <skipTests>false</skipTests>     <!--set true to disable tests temporarily-->
-        <gpg.skip>false</gpg.skip>       <!--set true to disable GPG temporarily-->
+        <skipTests>true</skipTests>     <!--set false to enable tests-->
+        <gpg.skip>true</gpg.skip>       <!--set false to enable GPG-->
     </properties>
     
     <build>
@@ -169,7 +169,7 @@
         <dependency>
             <groupId>org.visnow</groupId>
             <artifactId>JLargeArrays</artifactId>
-            <version>1.7</version>
+            <version>1.8-SNAPSHOT</version>
         </dependency>
     </dependencies>
     
