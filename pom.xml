@@ -4,7 +4,7 @@
     <groupId>com.github.wendykierp</groupId>
     <artifactId>JTransforms</artifactId>
     <name>JTransforms</name>
-    <version>3.2</version>
+    <version>3.3-SNAPSHOT</version>
     <packaging>jar</packaging>
     
     <description>JTransforms is the first, open source, multithreaded FFT library written in pure Java.</description>
@@ -32,8 +32,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <github.global.server>github</github.global.server>
         <project.scm.id>github</project.scm.id>
-        <skipTests>true</skipTests>     <!--disable tests temporarily-->
-        <gpg.skip>true</gpg.skip>       <!--disable GPG temporarily-->
+        <skipTests>false</skipTests>     <!--set true to disable tests temporarily-->
+        <gpg.skip>false</gpg.skip>       <!--set true to disable GPG temporarily-->
     </properties>
     
     <build>
