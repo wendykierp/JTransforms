@@ -1,3 +1,7 @@
+/**
+ * The JPMS module for the JTransforms library.
+ * Provides multithreaded FFT and other transforms in pure Java.
+ */
 module org.jtransforms {
     requires org.visnow.jlargearrays;
     requires java.logging;
