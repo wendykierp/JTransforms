@@ -21,7 +21,7 @@
 
     <developers>
         <developer>
-            <id>p.wendykier</id>
+            <id>wendykierp</id>
             <name>Piotr Wendykier</name>
             <email>piotr.wendykier@gmail.com</email>
             <timezone>+1</timezone>
@@ -176,7 +176,7 @@
     <scm>
         <connection>scm:git:https://github.com/wendykierp/JTransforms.git</connection>
         <developerConnection>scm:git:https://github.com/wendykierp/JTransforms.git</developerConnection>
-        <url>https://github.com/wendykierp/JTransforms</url>
+        <url>https://github.com/wendykierp/JTransforms.git</url>
         <tag>HEAD</tag>
     </scm>
     
